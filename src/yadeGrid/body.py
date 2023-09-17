@@ -68,7 +68,7 @@ class Quaternion:
 # ---------------------------------------------------------------------------------- multiply_quat #
 # JIT functions are given ndarray as input and output. The methods in quaternion functions
 # handle the task of constructing the quaternion from returned the ndarray
-# @jit(nopython=True)  # type: ignore
+@jit(nopython=True)  # type: ignore
 def multiply_quat(q1, q2):
     result = np.zeros(4, dtype=np.float64)
     result[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]
@@ -117,10 +117,10 @@ class AxisAngle:
 @define(kw_only=True)
 class Body:
     # State variables
-    pos: Vector3D      = field(default=np.array([[0, 0, 0]]))   # Position of the body
-    vel: Vector3D      = field(default=np.array([[0, 0, 0]]))   # Velocity of the body
+    pos: Vector3D      = field(default=np.array([0, 0, 0]))   # Position of the body
+    vel: Vector3D      = field(default=np.array([0, 0, 0]))   # Velocity of the body
     ori: Quaternion    = field(default=Quaternion())              # Orientation of the body
-    angVel: Vector3D   = field(default=np.array([[0, 0, 0]]))   # Angular velocity of the body
+    angVel: Vector3D   = field(default=np.array([0, 0, 0]))   # Angular velocity of the body
 
     # Constant variables
     density: np.float64     = field(default=1.0)           # Density of the body
@@ -130,9 +130,9 @@ class Body:
     id: int                 = field(default=0)             # Id of the body
 
     # Force variables
-    force: Vector3D    = field(default=np.array([[0, 0, 0]]))   # Force acting on the body
-    torque: Vector3D   = field(default=np.array([[0, 0, 0]]))   # Torque acting on the body
+    force: Vector3D    = field(default=np.array([0, 0, 0]))   # Force acting on the body
+    torque: Vector3D   = field(default=np.array([0, 0, 0]))   # Torque acting on the body
 
     def reset_forceTorque(self) -> None:
-        self.force  = np.array([[0, 0, 0]])
-        self.torque = np.array([[0, 0, 0]])
+        self.force  = np.array([0, 0, 0])
+        self.torque = np.array([0, 0, 0])

@@ -12,14 +12,14 @@ class test_body(TestCase):
     def test_body(self):
         body = Body()
         # test states are initialized correctly to 0
-        assert_array_equal(body.pos, np.array([[0, 0, 0]]))
-        assert_array_equal(body.vel, np.array([[0, 0, 0]]))
+        assert_array_equal(body.pos, np.array([0, 0, 0]))
+        assert_array_equal(body.vel, np.array([0, 0, 0]))
         self.assertEqual(body.ori, Quaternion())
-        assert_array_equal(body.angVel, np.array([[0, 0, 0]]))
+        assert_array_equal(body.angVel, np.array([0, 0, 0]))
 
         # Test the forces are initialized correctly to 0
-        assert_array_equal(body.force, np.array([[0, 0, 0]]))
-        assert_array_equal(body.torque, np.array([[0, 0, 0]]))
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
 
         # Test the constants are initialized correctly to 0
         self.assertEqual(body.mass, 0.0)
@@ -29,8 +29,8 @@ class test_body(TestCase):
         body.force = np.array([[1, 2, 3]])
         body.torque = np.array([[4, 5, 6]])
         body.reset_forceTorque()
-        assert_array_equal(body.force, np.array([[0, 0, 0]]))
-        assert_array_equal(body.torque, np.array([[0, 0, 0]]))
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
 
 
 # ------------------------------------------------------------------------------------------------ #
