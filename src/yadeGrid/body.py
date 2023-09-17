@@ -1,43 +1,53 @@
 # Import all the necessary modules
 import numpy as np
-from typing import cast
 from attrs import define, field
 from numba import jit
-from yadeGrid.yadeTypes import Vector3D
+from yadeGrid.yadeTypes import Vector3D, F64
+from numpy.typing import NDArray
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                                                                       QUATERNION #
 # ------------------------------------------------------------------------------------------------ #
-
-
 @define
 class Quaternion:
-    a: np.float64 = field(default=1.0)   # Real part of the quaternion
-    b: np.float64 = field(default=0.0)   # First imaginary part of the quaternion
-    c: np.float64 = field(default=0.0)   # Second imaginary part of the quaternion
-    d: np.float64 = field(default=0.0)   # Third imaginary part of the quaternion
+    components: NDArray[np.float64] = field(default=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64))
+    # This way we can pass the quaternion as ndarray to JITed functions
 
-    @jit(nopython=True)  # type: ignore
+    @property
+    def a(self) -> np.float64:
+        return self.components[0]
+
+    @property
+    def b(self) -> np.float64:
+        return self.components[1]
+
+    @property
+    def c(self) -> np.float64:
+        return self.components[2]
+
+    @property
+    def d(self) -> np.float64:
+        return self.components[3]
+
+    def __eq__(self, other):
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        return np.array_equal(self.components, other.components)
+
     def __mul__(self, other: 'Quaternion') -> 'Quaternion':
         if isinstance(other, Quaternion):
-            return Quaternion(
-                a=self.a * other.a - self.b * other.b - self.c * other.c - self.d * other.d,
-                b=self.a * other.b + self.b * other.a + self.c * other.d - self.d * other.c,
-                c=self.a * other.c - self.b * other.d + self.c * other.a + self.d * other.b,
-                d=self.a * other.d + self.b * other.c - self.c * other.b + self.d * other.a
-            )
+            result = multiply_quat(self.components, other.components)
+            return Quaternion(components=result)
         else:
             raise TypeError(f"Cannot multiply Quaternion with {type(other)}")
 
-    @jit(nopython=True)  # type: ignore
     def conjugate(self) -> 'Quaternion':
-        return Quaternion(a=self.a, b=-self.b, c=-self.c, d=-self.d)
+        return Quaternion(self.components * np.array([1, -1, -1, -1]))
 
-    @jit(nopython=True)  # type: ignore
     def norm(self) -> np.float64:
-        return cast(np.float64, np.sqrt(self.a**2 + self.b**2 + self.c**2 + self.d**2))
+        return F64(norm_quat(self.components))
 
-    @jit(nopython=True)  # type: ignore
     def normalize(self) -> 'Quaternion':
         return self / self.norm()
 
@@ -47,17 +57,31 @@ class Quaternion:
         axis = np.array([self.b, self.c, self.d]) / np.sqrt(1 - self.a**2)
         return AxisAngle(axis=axis, angle=angle)
 
-    @jit(nopython=True)  # type: ignore
     def __truediv__(self, scalar: np.float64) -> 'Quaternion':
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide Quaternion by zero")
 
-        return Quaternion(
-            a=self.a / scalar,
-            b=self.b / scalar,
-            c=self.c / scalar,
-            d=self.d / scalar
-        )
+        return Quaternion(np.array([self.a, self.b, self.c, self.d]) / scalar)
+
+
+# ---------------------------------------------------------------------------------- multiply_quat #
+# JIT functions are given ndarray as input and output. The methods in quaternion functions
+# handle the task of constructing the quaternion from returned the ndarray 
+@jit(nopython=True)  # type: ignore
+def multiply_quat(q1, q2):
+    result = np.zeros(4, dtype=np.float64)
+    result[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]
+    result[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]
+    result[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]
+    result[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]
+
+    return result
+
+
+# -------------------------------------------------------------------------------------- norm_quat #
+@jit(nopython=True)  # type: ignore
+def norm_quat(q1):
+    return np.sqrt(q1[0]**2 + q1[1]**2 + q1[2]**2 + q1[3]**2)
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -74,13 +98,20 @@ class AxisAngle:
     def __str__(self) -> str:
         return f"({self.angle}, {self.axis},)"
 
+    # def conv_2quaternion(self) -> Quaternion:
+    #     return Quaternion(
+    #         a=np.cos(self.angle / 2),
+    #         b=self.axis[0] * np.sin(self.angle / 2),
+    #         c=self.axis[1] * np.sin(self.angle / 2),
+    #         d=self.axis[2] * np.sin(self.angle / 2)
+    #     )
     def conv_2quaternion(self) -> Quaternion:
-        return Quaternion(
-            a=np.cos(self.angle / 2),
-            b=self.axis[0] * np.sin(self.angle / 2),
-            c=self.axis[1] * np.sin(self.angle / 2),
-            d=self.axis[2] * np.sin(self.angle / 2)
-        )
+        return Quaternion(np.array([
+            np.cos(self.angle / 2),
+            self.axis[0] * np.sin(self.angle / 2),
+            self.axis[1] * np.sin(self.angle / 2),
+            self.axis[2] * np.sin(self.angle / 2)
+        ]))
 
 
 # ------------------------------------------------------------------------------------------------ #
