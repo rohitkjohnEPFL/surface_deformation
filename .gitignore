@@ -1,6 +1,7 @@
 .history/*
 .vscode/*
 .mypy_cache/*
-myenv/*
+venv/*
 *.pyc
 */__pycache__/*
+*/yadeGrid.egg-info/*

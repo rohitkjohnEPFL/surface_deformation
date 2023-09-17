@@ -4,6 +4,7 @@ from attrs import define, field
 from numba import jit
 from yadeGrid.yadeTypes import Vector3D, F64
 from numpy.typing import NDArray
+from typing import Any
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -16,21 +17,21 @@ class Quaternion:
 
     @property
     def a(self) -> np.float64:
-        return self.components[0]
+        return np.float64(self.components[0])
 
     @property
     def b(self) -> np.float64:
-        return self.components[1]
+        return np.float64(self.components[1])
 
     @property
     def c(self) -> np.float64:
-        return self.components[2]
+        return np.float64(self.components[2])
 
     @property
     def d(self) -> np.float64:
-        return self.components[3]
+        return np.float64(self.components[3])
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if other.__class__ is not self.__class__:
             return NotImplemented
         return np.array_equal(self.components, other.components)
@@ -97,6 +98,9 @@ class AxisAngle:
 
     def __str__(self) -> str:
         return f"({self.angle}, {self.axis},)"
+
+    def __attrs_post_init__(self) -> None:
+        self.axis = self.axis / np.linalg.norm(self.axis)
 
     # def conv_2quaternion(self) -> Quaternion:
     #     return Quaternion(
