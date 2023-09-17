@@ -4,7 +4,7 @@ from attrs import define, field
 from yadeGrid.body import Body
 from yadeGrid.vectorFunc import norm
 from yadeGrid.yadeTypes import Vector3D, F64
-from numpy import array
+
 
 @define(slots=True)
 class Interaction:
@@ -88,18 +88,16 @@ class Interaction:
                 k_bending = {self.k_bending}, \n \
                 k_torsion = {self.k_torsion}"
 
-    def reset_ForceTorque(self):
+    def reset_ForceTorque(self) -> None:
         self.normal_force = np.array([0, 0, 0], dtype=F64)
         self.shear_force  = np.array([0, 0, 0], dtype=F64)
         self.bending_moment = np.array([0, 0, 0], dtype=F64)
         self.torsion_moment = np.array([0, 0, 0], dtype=F64)
 
-    def update_normal(self):
+    def update_normal(self) -> None:
         self.normal = (self.body2.pos - self.body1.pos) / norm(self.body2.pos - self.body1.pos)
 
-    def calc_NormalForce(self):
+    def calc_NormalForce(self) -> None:
         self.update_normal()
         defo              = norm(self.body2.pos - self.body1.pos) - self.edge_length
         self.normal_force = self.k_normal * defo * self.normal
-
-    
