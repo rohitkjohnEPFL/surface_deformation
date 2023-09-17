@@ -1,1 +1,6 @@
 .history/*
+.vscode/*
+.mypy_cache/*
+myenv/*
+*.pyc
+*/__pycache__/*
