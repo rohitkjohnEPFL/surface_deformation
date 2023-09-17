@@ -67,8 +67,8 @@ class Quaternion:
 
 # ---------------------------------------------------------------------------------- multiply_quat #
 # JIT functions are given ndarray as input and output. The methods in quaternion functions
-# handle the task of constructing the quaternion from returned the ndarray 
-@jit(nopython=True)  # type: ignore
+# handle the task of constructing the quaternion from returned the ndarray
+# @jit(nopython=True)  # type: ignore
 def multiply_quat(q1, q2):
     result = np.zeros(4, dtype=np.float64)
     result[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]
@@ -102,13 +102,6 @@ class AxisAngle:
     def __attrs_post_init__(self) -> None:
         self.axis = self.axis / np.linalg.norm(self.axis)
 
-    # def conv_2quaternion(self) -> Quaternion:
-    #     return Quaternion(
-    #         a=np.cos(self.angle / 2),
-    #         b=self.axis[0] * np.sin(self.angle / 2),
-    #         c=self.axis[1] * np.sin(self.angle / 2),
-    #         d=self.axis[2] * np.sin(self.angle / 2)
-    #     )
     def conv_2quaternion(self) -> Quaternion:
         return Quaternion(np.array([
             np.cos(self.angle / 2),

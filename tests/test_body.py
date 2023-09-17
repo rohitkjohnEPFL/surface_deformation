@@ -1,7 +1,8 @@
-from yadeGrid import Body, Quaternion
+from yadeGrid import Body, Quaternion, AxisAngle
 from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal, assert_almost_equal
+from random import random
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -114,3 +115,44 @@ class test_quaternion(TestCase):
         q = Quaternion(components=np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
         with self.assertRaises(ZeroDivisionError):
             q / np.float64(0.0)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                                                                        AXISANGLE #
+# ------------------------------------------------------------------------------------------------ #
+class test_AxisAngle(TestCase):
+    def test_default_initialization(self):
+        axisAngle = AxisAngle()
+        assert_array_equal(axisAngle.axis, np.array([1, 0, 0]))
+        self.assertEqual(axisAngle.angle, 0.0)
+
+    def test_custom_initialization(self):
+        axisAngle = AxisAngle(axis=np.array([5, 1, 9]), angle=np.pi / 2.0)
+        assert_array_equal(axisAngle.axis, np.array([5, 1, 9]) / np.linalg.norm([5, 1, 9]))
+        self.assertEqual(axisAngle.angle, np.pi / 2.0)
+
+    def test_negative_initialization(self):
+        axisAngle = AxisAngle(axis=np.array([-5, -1, -9]), angle=np.pi / 2.0)
+        assert_array_equal(axisAngle.axis, np.array([-5, -1, -9]) / np.linalg.norm([-5, -1, -9]))
+        self.assertEqual(axisAngle.angle, np.pi / 2.0)
+
+    def test_conversion_to_quaternion(self):
+        axisAngle = AxisAngle(axis=np.array([5, 1, 9]), angle=np.pi / 2.0)
+        quaternion = axisAngle.conv_2quaternion()
+        assert_almost_equal(quaternion.a, np.cos(np.pi / 4.0))
+        assert_almost_equal(quaternion.b, np.sin(np.pi / 4.0) * 5 / np.sqrt(107))
+        assert_almost_equal(quaternion.c, np.sin(np.pi / 4.0) * 1 / np.sqrt(107))
+        assert_almost_equal(quaternion.d, np.sin(np.pi / 4.0) * 9 / np.sqrt(107))
+
+    def test_conversion_to_quaternion_2(self):
+        axis = np.array([random(), random(), random()])
+        ang  = random()
+        norm = np.linalg.norm(axis)
+
+        axisAngle = AxisAngle(axis=axis, angle=ang)
+        quaternion = axisAngle.conv_2quaternion()
+
+        assert_almost_equal(quaternion.a, np.cos(ang / 2.0))
+        assert_almost_equal(quaternion.b, np.sin(ang / 2.0) * axis[0] / norm)
+        assert_almost_equal(quaternion.c, np.sin(ang / 2.0) * axis[1] / norm)
+        assert_almost_equal(quaternion.d, np.sin(ang / 2.0) * axis[2] / norm)
