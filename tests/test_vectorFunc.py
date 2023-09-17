@@ -1,8 +1,8 @@
 from yadeGrid.vectorFunc import crossProduct, dotProduct, norm
+from yadeGrid.yadeTypes import F64
 from numpy import array
 from unittest import TestCase
 from numpy.testing import assert_array_equal, assert_almost_equal
-import numpy as np
 
 
 # ------------------------------------------------------------------------------------------------ #
@@ -32,7 +32,6 @@ class test_crossProduct(TestCase):
         assert_array_equal(crossProduct(vecX, vecZ), -vecY)
 
 
-
 # ------------------------------------------------------------------------------------------------ #
 #                                                                                  TEST_DOTPRODUCT #
 # ------------------------------------------------------------------------------------------------ #
@@ -60,16 +59,16 @@ class test_dotProduct(TestCase):
 class test_norm(TestCase):
     def test_norm(self):
         vec1 = array([1., 2., 3.])
-        assert_almost_equal(norm(vec1), np.float64(3.7416573867739413))
+        assert_almost_equal(norm(vec1), F64(3.7416573867739413))
 
         vecX = array([1., 0., 0.])
         vecY = array([0., 1., 0.])
         vecZ = array([0., 0., 1.])
-        assert_almost_equal(norm(vecX), np.float64(1.))
-        assert_almost_equal(norm(vecY), np.float64(1.))
-        assert_almost_equal(norm(vecZ), np.float64(1.))
+        assert_almost_equal(norm(vecX), F64(1.))
+        assert_almost_equal(norm(vecY), F64(1.))
+        assert_almost_equal(norm(vecZ), F64(1.))
 
         vec2 = array([1., 1., 0])
         vec3 = array([1., 1., 1.])
-        assert_almost_equal(norm(vec2), np.float64(1.4142135623730951))
-        assert_almost_equal(norm(vec3), np.float64(1.7320508075688772))
+        assert_almost_equal(norm(vec2), F64(1.4142135623730951))
+        assert_almost_equal(norm(vec3), F64(1.7320508075688772))

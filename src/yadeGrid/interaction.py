@@ -3,7 +3,7 @@ import numpy as np
 from attrs import define, field
 from yadeGrid.body import Body
 from yadeGrid.vectorFunc import norm
-from yadeGrid.yadeTypes import Vector3D
+from yadeGrid.yadeTypes import Vector3D, F64
 
 
 @define(slots=True)
@@ -11,15 +11,15 @@ class Interaction:
     # Required attributes
     body1: Body
     body2: Body
-    young_mod: np.float64   = field(default=70e9)  # Aluminium
-    poisson: np.float64     = field(default=0.35)  # Aluminium
+    young_mod: F64   = field(default=70e9)  # Aluminium
+    poisson: F64     = field(default=0.35)  # Aluminium
 
     # Calculated attributes
-    shear_mod: np.float64   = field(default=1e6)
-    k_normal: np.float64    = field(default=0.0)
-    k_shear: np.float64     = field(default=0.0)
-    k_bending: np.float64   = field(default=0.0)
-    k_torsion: np.float64   = field(default=0.0)
+    shear_mod: F64   = field(default=1e6)
+    k_normal: F64    = field(default=0.0)
+    k_shear: F64     = field(default=0.0)
+    k_bending: F64   = field(default=0.0)
+    k_torsion: F64   = field(default=0.0)
     normal: Vector3D        = field(default=np.array([0, 0, 0]))
 
     def __attrs_post_init__(self) -> None:
@@ -31,13 +31,12 @@ class Interaction:
 
 
         # Assigning mass of the grid
-        len: np.float64     = norm(self.body1.pos - self.body2.pos)
-        print(len)
-        rad: np.float64     = self.body1.radius
-        halfVol: np.float64 = 0.5 * np.pi * rad**2 * len
-        density: np.float64 = self.body1.density
-        mass: np.float64    = density * halfVol
-        geomInert: np.float64 = 2. / 5. * mass * rad**2
+        len: F64     = norm(self.body1.pos - self.body2.pos)
+        rad: F64     = self.body1.radius
+        halfVol: F64 = 0.5 * np.pi * rad**2 * len
+        density: F64 = self.body1.density
+        mass: F64    = density * halfVol
+        geomInert: F64 = 2. / 5. * mass * rad**2
 
 
         # Each interaction adds half the mass and half the moment of inertia

@@ -1,12 +1,7 @@
 # Import all the necessary modules
 import numpy as np
 from numba import jit
-import numpy.typing as npt
-
-
-# Type alias for ndArray for floats
-Vector3D = npt.NDArray[np.float64]
-
+from yadeGrid.yadeTypes import Vector3D, F64
 
 
 @jit(nopython=True)  # type: ignore
@@ -19,15 +14,15 @@ def crossProduct(a: Vector3D, b: Vector3D) -> Vector3D:
 
 
 @jit(nopython=True)  # type: ignore
-def dotProduct(a: Vector3D, b: Vector3D) -> np.float64:
+def dotProduct(a: Vector3D, b: Vector3D) -> F64:
     """Dot product of two vectors"""
     a1, a2, a3 = a
     b1, b2, b3 = b
 
-    return np.float64(a1 * b1 + a2 * b2 + a3 * b3)
+    return F64(a1 * b1 + a2 * b2 + a3 * b3)
 
 
 @jit(nopython=True)  # type: ignore
-def norm(a: Vector3D) -> np.float64:
+def norm(a: Vector3D) -> F64:
     """Norm of a vector"""
-    return np.float64(np.sqrt(dotProduct(a, a)))
+    return F64(np.sqrt(dotProduct(a, a)))

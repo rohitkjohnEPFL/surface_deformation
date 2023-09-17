@@ -38,8 +38,8 @@ class Quaternion:
         return cast(np.float64, np.sqrt(self.a**2 + self.b**2 + self.c**2 + self.d**2))
 
     @jit(nopython=True)  # type: ignore
-    def normalize(self) -> np.float64:
-        return cast(np.float64, self / self.norm())
+    def normalize(self) -> 'Quaternion':
+        return self / self.norm()
 
     @jit(nopython=True)  # type: ignore
     def conv_2axisAngle(self) -> 'AxisAngle':
@@ -95,7 +95,7 @@ class Body:
     angVel: Vector3D   = field(default=np.array([[0, 0, 0]]))   # Angular velocity of the body
 
     # Constant variables
-    density: np.float64     = field(default=0.0)           # Density of the body
+    density: np.float64     = field(default=1.0)           # Density of the body
     mass: np.float64        = field(default=0.0)           # Mass of the body
     radius: np.float64      = field(default=0.0)           # Radius of the body
     inertia: np.float64     = field(default=0.0)           # Diagonal inertia tensor of the body
