@@ -17,7 +17,7 @@ class Quaternion:
     c: np.float64 = field(default=0.0)   # Second imaginary part of the quaternion
     d: np.float64 = field(default=0.0)   # Third imaginary part of the quaternion
 
-    @jit  # type: ignore
+    @jit(nopython=True)  # type: ignore
     def __mul__(self, other: 'Quaternion') -> 'Quaternion':
         if isinstance(other, Quaternion):
             return Quaternion(
@@ -29,25 +29,25 @@ class Quaternion:
         else:
             raise TypeError(f"Cannot multiply Quaternion with {type(other)}")
 
-    @jit  # type: ignore
+    @jit(nopython=True)  # type: ignore
     def conjugate(self) -> 'Quaternion':
         return Quaternion(a=self.a, b=-self.b, c=-self.c, d=-self.d)
 
-    @jit  # type: ignore
+    @jit(nopython=True)  # type: ignore
     def norm(self) -> np.float64:
         return cast(np.float64, np.sqrt(self.a**2 + self.b**2 + self.c**2 + self.d**2))
 
-    @jit  # type: ignore
+    @jit(nopython=True)  # type: ignore
     def normalize(self) -> np.float64:
         return cast(np.float64, self / self.norm())
 
-    @jit  # type: ignore
+    @jit(nopython=True)  # type: ignore
     def conv_2axisAngle(self) -> 'AxisAngle':
         angle = 2 * np.arccos(self.a)
         axis = np.array([self.b, self.c, self.d]) / np.sqrt(1 - self.a**2)
         return AxisAngle(axis=axis, angle=angle)
 
-    @jit  # type: ignore
+    @jit(nopython=True)  # type: ignore
     def __truediv__(self, scalar: np.float64) -> 'Quaternion':
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide Quaternion by zero")
