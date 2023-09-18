@@ -3,6 +3,7 @@ import numpy as np
 from attrs import define, field
 from numba import jit
 from yadeGrid.yadeTypes import Vector3D, F64
+from yadeGrid.vectorFunc import norm
 from numpy.typing import NDArray
 from typing import Any
 
@@ -49,13 +50,20 @@ class Quaternion:
     def norm(self) -> np.float64:
         return F64(norm_quat(self.components))
 
-    def normalize(self) -> 'Quaternion':
-        return self / self.norm()
+    def normalize(self) -> None:
+        normalized = self / self.norm()
+        self.components = normalized.components
 
-    @jit(nopython=True)  # type: ignore
+    def inverse(self) -> 'Quaternion':
+        return self.conjugate() / self.norm()**2
+
     def conv_2axisAngle(self) -> 'AxisAngle':
+
         angle = 2 * np.arccos(self.a)
-        axis = np.array([self.b, self.c, self.d]) / np.sqrt(1 - self.a**2)
+        axis = np.array([self.b, self.c, self.d])
+        axisNorm = norm(axis)
+        if axisNorm != 0:
+            axis = axis / axisNorm
         return AxisAngle(axis=axis, angle=angle)
 
     def __truediv__(self, scalar: np.float64) -> 'Quaternion':

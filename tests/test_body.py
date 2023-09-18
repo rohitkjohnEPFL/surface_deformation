@@ -147,11 +147,28 @@ class test_quaternion(TestCase):
     def test_normalize(self):
         q = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
         norm_q = q.norm()
-        normalized_q = q.normalize()
-        assert_almost_equal(normalized_q.components[0], np.float64(q.components[0] / norm_q))
-        assert_almost_equal(normalized_q.components[1], np.float64(q.components[1] / norm_q))
-        assert_almost_equal(normalized_q.components[2], np.float64(q.components[2] / norm_q))
-        assert_almost_equal(normalized_q.components[3], np.float64(q.components[3] / norm_q))
+        a_norm = 1.0 / norm_q
+        b_norm = 2.0 / norm_q
+        c_norm = 3.0 / norm_q
+        d_norm = 4.0 / norm_q
+        q.normalize()
+        assert_almost_equal(q.a, a_norm)
+        assert_almost_equal(q.b, b_norm)
+        assert_almost_equal(q.c, c_norm)
+        assert_almost_equal(q.d, d_norm)
+
+    def test_inverse(self):
+        q = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
+        qinverse = q.inverse()
+
+        # Manually calculating the inverse
+        a, b, c, d   = q.components
+        norm_squared = a**2 + b**2 + c**2 + d**2
+        inverse_quaternion = np.array([a, -b, -c, -d]) / norm_squared
+        qInvTest           = Quaternion(components=inverse_quaternion)
+
+        # Testing
+        self.assertEqual(qinverse, qInvTest)
 
     def test_division_by_scalar(self):
         q = Quaternion(components=np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
@@ -165,6 +182,14 @@ class test_quaternion(TestCase):
         q = Quaternion(components=np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
         with self.assertRaises(ZeroDivisionError):
             q / np.float64(0.0)
+
+    def test_convert2AxisAngle(self):
+        q = Quaternion(components=np.array([np.cos(np.pi / 4.0), np.sin(np.pi / 4.0), 0, 0], dtype=np.float64))
+        axisAngle = q.conv_2axisAngle()
+        assert_almost_equal(axisAngle.axis, np.array([1, 0, 0]))
+        assert_almost_equal(axisAngle.angle, np.pi / 2.0)
+
+    # def test_convert2AxisAngleRand(self)
 
 
 # ------------------------------------------------------------------------------------------------ #
