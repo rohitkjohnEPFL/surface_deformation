@@ -108,7 +108,8 @@ class AxisAngle:
         return f"({self.angle}, {self.axis},)"
 
     def __attrs_post_init__(self) -> None:
-        self.axis = self.axis / np.linalg.norm(self.axis)
+        if norm(self.axis) != 0:
+            self.axis = self.axis / np.linalg.norm(self.axis)
 
     def conv_2quaternion(self) -> Quaternion:
         return Quaternion(np.array([
