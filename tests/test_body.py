@@ -9,7 +9,7 @@ from random import random
 #                                                                                        TEST_BODY #
 # ------------------------------------------------------------------------------------------------ #
 class test_body(TestCase):
-    def test_body(self):
+    def test_body(self) -> None:
         body = Body()
         # test states are initialized correctly to 0
         assert_array_equal(body.pos, np.array([0, 0, 0]))
@@ -32,7 +32,7 @@ class test_body(TestCase):
         assert_array_equal(body.force, np.array([0, 0, 0]))
         assert_array_equal(body.torque, np.array([0, 0, 0]))
 
-    def test_addForce(self):
+    def test_addForce(self) -> None:
         body = Body()
         assert_array_equal(body.force, np.array([0, 0, 0]))
         assert_array_equal(body.torque, np.array([0, 0, 0]))
@@ -48,7 +48,7 @@ class test_body(TestCase):
         assert_array_equal(body.force, vec1 + vec2)
         assert_array_equal(body.torque, np.array([0, 0, 0]))
 
-    def test_addTorque(self):
+    def test_addTorque(self) -> None:
         body = Body()
         assert_array_equal(body.force, np.array([0, 0, 0]))
         assert_array_equal(body.torque, np.array([0, 0, 0]))
@@ -64,7 +64,7 @@ class test_body(TestCase):
         assert_array_equal(body.force, np.array([0, 0, 0]))
         assert_array_equal(body.torque, vec1 + vec2)
 
-    def test_addForceTorques(self):
+    def test_addForceTorques(self) -> None:
         body = Body()
         assert_array_equal(body.force, np.array([0, 0, 0]))
         assert_array_equal(body.torque, np.array([0, 0, 0]))
@@ -87,34 +87,34 @@ class test_body(TestCase):
 #                                                                                  TEST_QUATERNION #
 # ------------------------------------------------------------------------------------------------ #
 class test_quaternion(TestCase):
-    def test_default_initialization(self):
+    def test_default_initialization(self) -> None:
         q = Quaternion()
         self.assertEqual(q.a, np.float64(1.0))
         self.assertEqual(q.b, np.float64(0.0))
         self.assertEqual(q.c, np.float64(0.0))
         self.assertEqual(q.d, np.float64(0.0))
 
-    def test_custom_initialization(self):
+    def test_custom_initialization(self) -> None:
         q = Quaternion(np.array([np.float64(2.0), np.float64(3.0), np.float64(4.0), np.float64(5.0)]))
         self.assertEqual(q.a, np.float64(2.0))
         self.assertEqual(q.b, np.float64(3.0))
         self.assertEqual(q.c, np.float64(4.0))
         self.assertEqual(q.d, np.float64(5.0))
 
-    def test_negative_initialization(self):
+    def test_negative_initialization(self) -> None:
         q = Quaternion(np.array([np.float64(-1.0), np.float64(-2.0), np.float64(-3.0), np.float64(-4.0)]))
         self.assertEqual(q.a, np.float64(-1.0))
         self.assertEqual(q.b, np.float64(-2.0))
         self.assertEqual(q.c, np.float64(-3.0))
         self.assertEqual(q.d, np.float64(-4.0))
 
-    def test_multiplication_identity(self):
+    def test_multiplication_identity(self) -> None:
         q1 = Quaternion()
         q2 = Quaternion(np.array([np.float64(-1.0), np.float64(-2.0), np.float64(-3.0), np.float64(-4.0)]))
         result = q1 * q2
         self.assertEqual(result, q2)
 
-    def test_multiplication_custom(self):
+    def test_multiplication_custom(self) -> None:
         q1 = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
         q2 = Quaternion(components=np.array([2.0, 3.0, 4.0, 5.0], dtype=np.float64))
         result = q1 * q2
@@ -124,7 +124,7 @@ class test_quaternion(TestCase):
         self.assertEqual(result.components[2], np.float64(12.0))
         self.assertEqual(result.components[3], np.float64(12.0))
 
-    def test_conjugate_positive(self):
+    def test_conjugate_positive(self) -> None:
         q = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
         result = q.conjugate()
         self.assertEqual(result.components[0], np.float64(1.0))
@@ -132,7 +132,7 @@ class test_quaternion(TestCase):
         self.assertEqual(result.components[2], np.float64(-3.0))
         self.assertEqual(result.components[3], np.float64(-4.0))
 
-    def test_conjugate_negative(self):
+    def test_conjugate_negative(self) -> None:
         q = Quaternion(components=np.array([-1.0, -2.0, -3.0, -4.0], dtype=np.float64))
         result = q.conjugate()
         self.assertEqual(result.components[0], np.float64(-1.0))
@@ -140,11 +140,11 @@ class test_quaternion(TestCase):
         self.assertEqual(result.components[2], np.float64(3.0))
         self.assertEqual(result.components[3], np.float64(4.0))
 
-    def test_norm(self):
+    def test_norm(self) -> None:
         q = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
         assert_almost_equal(q.norm(), np.float64(np.sqrt(30)))
 
-    def test_normalize(self):
+    def test_normalize(self) -> None:
         q = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
         norm_q = q.norm()
         a_norm = 1.0 / norm_q
@@ -157,7 +157,7 @@ class test_quaternion(TestCase):
         assert_almost_equal(q.c, c_norm)
         assert_almost_equal(q.d, d_norm)
 
-    def test_inverse(self):
+    def test_inverse(self) -> None:
         q = Quaternion(components=np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64))
         qinverse = q.inverse()
 
@@ -170,7 +170,7 @@ class test_quaternion(TestCase):
         # Testing
         self.assertEqual(qinverse, qInvTest)
 
-    def test_division_by_scalar(self):
+    def test_division_by_scalar(self) -> None:
         q = Quaternion(components=np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
         result = q / np.float64(2.0)
         self.assertEqual(result.components[0], np.float64(1.0))
@@ -178,40 +178,48 @@ class test_quaternion(TestCase):
         self.assertEqual(result.components[2], np.float64(3.0))
         self.assertEqual(result.components[3], np.float64(4.0))
 
-    def test_division_by_zero(self):
+    def test_division_by_zero(self) -> None:
         q = Quaternion(components=np.array([2.0, 4.0, 6.0, 8.0], dtype=np.float64))
         with self.assertRaises(ZeroDivisionError):
             q / np.float64(0.0)
 
-    def test_convert2AxisAngle(self):
+    def test_convert2AxisAngle(self) -> None:
         q = Quaternion(components=np.array([np.cos(np.pi / 4.0), np.sin(np.pi / 4.0), 0, 0], dtype=np.float64))
         axisAngle = q.conv_2axisAngle()
         assert_almost_equal(axisAngle.axis, np.array([1, 0, 0]))
         assert_almost_equal(axisAngle.angle, np.pi / 2.0)
 
-    # def test_convert2AxisAngleRand(self)
+    def test_convert2AxisAngleNonUnit(self) -> None:
+        ang = np.pi / 2.0
+        axis = np.array([1, 0, 0])
+        scale = random()
+        
+        q = Quaternion(components=scale * np.array([np.cos(ang / 2), *axis * np.sin(ang / 2)]))
+        axisAngle = q.conv_2axisAngle()
+        assert_almost_equal(axisAngle.axis, np.array([1, 0, 0]))
+        assert_almost_equal(axisAngle.angle, np.pi / 2.0)
 
 
 # ------------------------------------------------------------------------------------------------ #
 #                                                                                        AXISANGLE #
 # ------------------------------------------------------------------------------------------------ #
 class test_AxisAngle(TestCase):
-    def test_default_initialization(self):
+    def test_default_initialization(self) -> None:
         axisAngle = AxisAngle()
         assert_array_equal(axisAngle.axis, np.array([1, 0, 0]))
         self.assertEqual(axisAngle.angle, 0.0)
 
-    def test_custom_initialization(self):
+    def test_custom_initialization(self) -> None:
         axisAngle = AxisAngle(axis=np.array([5, 1, 9]), angle=np.pi / 2.0)
         assert_array_equal(axisAngle.axis, np.array([5, 1, 9]) / np.linalg.norm([5, 1, 9]))
         self.assertEqual(axisAngle.angle, np.pi / 2.0)
 
-    def test_negative_initialization(self):
+    def test_negative_initialization(self) -> None:
         axisAngle = AxisAngle(axis=np.array([-5, -1, -9]), angle=np.pi / 2.0)
         assert_array_equal(axisAngle.axis, np.array([-5, -1, -9]) / np.linalg.norm([-5, -1, -9]))
         self.assertEqual(axisAngle.angle, np.pi / 2.0)
 
-    def test_conversion_to_quaternion(self):
+    def test_conversion_to_quaternion(self) -> None:
         axisAngle = AxisAngle(axis=np.array([5, 1, 9]), angle=np.pi / 2.0)
         quaternion = axisAngle.conv_2quaternion()
         assert_almost_equal(quaternion.a, np.cos(np.pi / 4.0))
@@ -219,7 +227,7 @@ class test_AxisAngle(TestCase):
         assert_almost_equal(quaternion.c, np.sin(np.pi / 4.0) * 1 / np.sqrt(107))
         assert_almost_equal(quaternion.d, np.sin(np.pi / 4.0) * 9 / np.sqrt(107))
 
-    def test_conversion_to_quaternion_2(self):
+    def test_conversion_to_quaternion_2(self) -> None:
         axis = np.array([random(), random(), random()])
         ang  = random()
         norm = np.linalg.norm(axis)

@@ -9,7 +9,7 @@ from numpy.testing import assert_array_equal, assert_almost_equal
 #                                                                                TEST_CROSSPRODUCT #
 # ------------------------------------------------------------------------------------------------ #
 class test_crossProduct(TestCase):
-    def test_crossProduct(self):
+    def test_crossProduct(self) -> None:
         vec1 = array([1., 2., 3.])
         vec2 = array([4., 5., 6.])
         vec12ans = array([-3., 6., -3.])
@@ -36,7 +36,7 @@ class test_crossProduct(TestCase):
 #                                                                                  TEST_DOTPRODUCT #
 # ------------------------------------------------------------------------------------------------ #
 class test_dotProduct(TestCase):
-    def test_dotProduct(self):
+    def test_dotProduct(self) -> None:
         vec1 = array([1., 2., 3.])
         vec2 = array([4., 5., 6.])
         assert_array_equal(dotProduct(vec1, vec2), 32.)
@@ -57,7 +57,7 @@ class test_dotProduct(TestCase):
 #                                                                                        TEST_NORM #
 # ------------------------------------------------------------------------------------------------ #
 class test_norm(TestCase):
-    def test_norm(self):
+    def test_norm(self) -> None:
         vec1 = array([1., 2., 3.])
         assert_almost_equal(norm(vec1), F64(3.7416573867739413))
 
@@ -75,12 +75,12 @@ class test_norm(TestCase):
 
 
 class test_normalise(TestCase):
-    def test_normalise(self):
+    def test_normalise(self) -> None:
         vec1    = array([1., 2., 3.])
         vec1ans = array([0.2672612419124244, 0.5345224838248488, 0.8017837257372732])
         assert_array_equal(normalise(vec1), vec1ans)
 
-    def test_withUnitVectors(self):
+    def test_withUnitVectors(self) -> None:
         vecx   = array([1., 0., 0.])
         vecy   = array([0., 1., 0.])
         vecz   = array([0., 0., 1.])
@@ -88,7 +88,7 @@ class test_normalise(TestCase):
         assert_array_equal(normalise(vecy), vecy)
         assert_array_equal(normalise(vecz), vecz)
 
-    def test_withZeroVector(self):
+    def test_withZeroVector(self) -> None:
         vec0 = array([0., 0., 0.])
         with self.assertRaises(ZeroDivisionError):
             normalise(vec0)
