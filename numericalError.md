@@ -1,0 +1,1 @@
+Running the torsionMoment test in test_interaction.py, there seems to be numerical errors in the model. When we run with angvel 1.0 and dt = 1e-6, the test fails. But when the velocity is 5e4 and dt 1e-61 the test is passed

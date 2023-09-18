@@ -1,13 +1,13 @@
-from yadeGrid import Body, Interaction, F64
+from yadeGrid import Body, Interaction, F64, Quaternion
 from yadeGrid.vectorFunc import normalise
 from unittest import TestCase
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_array_equal
+from numpy.testing import assert_almost_equal, assert_array_equal, assert_array_almost_equal
 import json
 
 
 class test_Interaction(TestCase):
-    def test_initialisation(self):
+    def test_initialisation(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -27,7 +27,7 @@ class test_Interaction(TestCase):
         self.assertEqual(inter2.body1, body2)
         self.assertEqual(inter2.body2, body3)
 
-    def test_edgeLengthCalculation(self):
+    def test_edgeLengthCalculation(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -40,7 +40,7 @@ class test_Interaction(TestCase):
         inter1 = Interaction(body1, body2, young_mod=young, poisson=poisson)
         self.assertEqual(inter1.edge_length, 1.0)
 
-    def test_initialisation_bodyMass(self):
+    def test_initialisation_bodyMass(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -67,7 +67,7 @@ class test_Interaction(TestCase):
         self.assertEqual(body2.mass, halfMass_12 + halfMass_23)
         self.assertEqual(body3.mass, halfMass_23)
 
-    def test_initialisation_bodyInertia(self):
+    def test_initialisation_bodyInertia(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -96,7 +96,7 @@ class test_Interaction(TestCase):
         self.assertEqual(body2.inertia, geomInert_12 + geomInert_23)
         self.assertEqual(body3.inertia, geomInert_23)
 
-    def test_stiffnessCalculation(self):
+    def test_stiffnessCalculation(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -148,7 +148,7 @@ class test_Interaction(TestCase):
         self.assertEqual(inter2.k_bending, k_bending_23)
 
 
-    def test_StiffnessFromYade(self):
+    def test_StiffnessFromYade(self) -> None:
         '''The values were taken from a YADE simulation with the following script:
             # -*- encoding=utf-8 -*-
 
@@ -230,7 +230,7 @@ class test_Interaction(TestCase):
         self.assertEqual(inter2.k_shear, 8246680.715673208)
         self.assertEqual(inter2.k_bending, 2748893.5718910694)
 
-    def test_updateNormal(self):
+    def test_updateNormal(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -257,7 +257,7 @@ class test_Interaction(TestCase):
         with self.assertRaises(ZeroDivisionError):
             inter.update_normal()
 
-    def test_normalForceCalculation(self):
+    def test_normalForceCalculation(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -286,10 +286,9 @@ class test_Interaction(TestCase):
         inter.update_normal()
         inter.calc_NormalForce()
         forceExp = (pos4 - np.array([1, 0, 0], dtype=F64)) * inter.k_normal
-        print(forceExp)
         assert_almost_equal(inter.normal_force, forceExp)
 
-    def test_normalForceFromYade(self):
+    def test_normalForceFromYade(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -318,3 +317,65 @@ class test_Interaction(TestCase):
             forceCalc.append(-inter.normal_force[0])
 
         assert_array_equal(forceCalc, yadeForce)
+
+
+    def test_relativePos(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+
+        ang1    = np.pi / 4
+        axis1   = normalise(np.array([0, 4, 1], dtype=F64))
+        ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
+        ori1Inv = ori1.inverse()
+
+        ang2    = np.pi / 2
+        axis2   = normalise(np.array([0, 1, 5], dtype=F64))
+        ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
+
+        relative_ori = ori1Inv * ori2
+
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        relative_pos = pos2 - pos1
+
+        b1 = Body(pos=pos1, radius=rad, density=density, ori=ori1)
+        b2 = Body(pos=pos2, radius=rad, density=density, ori=ori2)
+        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        inter.update_relativePos()
+
+        self.assertEqual(inter.relative_ori, relative_ori)
+        assert_array_equal(inter.relative_pos, relative_pos)
+
+    def test_bendingMomentYade(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+
+        with open(".\\tests\\torsionMomentTestAngVel_5e4.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+            yadeResultMoment: list[list[float]] = yadeResult["moment"]
+
+        yadeOri   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+        yadeMoment = yadeResultMoment
+
+        momentCalc = []
+        for ori in yadeOri:
+            b2.ori = ori
+            inter.update_normal()
+            inter.update_relativePos()
+            inter.calc_torsionMoment()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            momentCalc.append(-inter.torsion_moment[0])
+
+        assert_array_almost_equal(momentCalc, yadeMoment)

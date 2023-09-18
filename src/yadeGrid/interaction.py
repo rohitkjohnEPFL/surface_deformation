@@ -1,8 +1,8 @@
 # Import all the necessary modules
 import numpy as np
 from attrs import define, field
-from yadeGrid.body import Body
-from yadeGrid.vectorFunc import norm, normalise
+from yadeGrid.body import Body, Quaternion
+from yadeGrid.vectorFunc import norm, normalise, dotProduct
 from yadeGrid.yadeTypes import Vector3D, F64
 # from numba import jit
 
@@ -23,6 +23,8 @@ class Interaction:
     k_torsion: F64   = field(default=0.0)
     normal: Vector3D        = field(default=np.array([0, 0, 0]))
     edge_length: F64 = field(default=0.0)
+    relative_pos: Vector3D  = field(default=np.array([0, 0, 0], dtype=F64))
+    relative_ori: Quaternion = field(default=Quaternion())
 
     # Default initialised attributes
     normal_force: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
@@ -52,7 +54,8 @@ class Interaction:
         geomInert: F64   = 2. / 5. * mass * rad**2
 
         # assigning edge length
-        self.edge_length = edge_length
+        self.edge_length  = edge_length
+        self.relative_pos = self.body2.pos - self.body1.pos
 
         # Each interaction adds half the mass and half the moment of inertia
         # of the cylinder to each node
@@ -97,22 +100,34 @@ class Interaction:
         self.bending_moment = np.array([0, 0, 0], dtype=F64)
         self.torsion_moment = np.array([0, 0, 0], dtype=F64)
 
+    def calc_ForcesTorques(self) -> None:
+        self.update_normal()
+        self.update_relativePos()
+        self.calc_NormalForce()
+
+
     def update_normal(self) -> None:
         self.normal = normalise(self.body2.pos - self.body1.pos)
 
+    def update_relativePos(self) -> None:
+        self.relative_pos = self.body2.pos - self.body1.pos
+        ori1 = self.body1.ori
+        ori2 = self.body2.ori
+        ori1_inv = ori1.inverse()
+        self.relative_ori = ori1_inv * ori2
+
     # @jit(nopython=True)  # type: ignore
     def calc_NormalForce(self) -> None:
-        self.update_normal()
         defo              = norm(self.body2.pos - self.body1.pos) - self.edge_length
-        print("pos1", self.body1.pos)
-        print("pos2", self.body2.pos)
-        print("normal", self.normal)
-        print("edge_length", self.edge_length)
-        print("defo", defo)
         self.normal_force = self.k_normal * defo * self.normal
 
         # If you want to use numba, use the following code
         # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
+
+    def calc_torsionMoment(self) -> None:
+        axisAngle = self.relative_ori.conv_2axisAngle()
+        twist     = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
+        self.torsion_moment = self.k_torsion * twist * self.normal
 
 
 # @jit(nopython=True)  # type: ignore
