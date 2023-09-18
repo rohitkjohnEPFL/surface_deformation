@@ -2,8 +2,9 @@
 import numpy as np
 from attrs import define, field
 from yadeGrid.body import Body
-from yadeGrid.vectorFunc import norm
+from yadeGrid.vectorFunc import norm, normalise
 from yadeGrid.yadeTypes import Vector3D, F64
+# from numba import jit
 
 
 @define(slots=True)
@@ -50,6 +51,8 @@ class Interaction:
         mass: F64        = density * halfVol
         geomInert: F64   = 2. / 5. * mass * rad**2
 
+        # assigning edge length
+        self.edge_length = edge_length
 
         # Each interaction adds half the mass and half the moment of inertia
         # of the cylinder to each node
@@ -95,9 +98,27 @@ class Interaction:
         self.torsion_moment = np.array([0, 0, 0], dtype=F64)
 
     def update_normal(self) -> None:
-        self.normal = (self.body2.pos - self.body1.pos) / norm(self.body2.pos - self.body1.pos)
+        self.normal = normalise(self.body2.pos - self.body1.pos)
 
+    # @jit(nopython=True)  # type: ignore
     def calc_NormalForce(self) -> None:
         self.update_normal()
         defo              = norm(self.body2.pos - self.body1.pos) - self.edge_length
+        print("pos1", self.body1.pos)
+        print("pos2", self.body2.pos)
+        print("normal", self.normal)
+        print("edge_length", self.edge_length)
+        print("defo", defo)
         self.normal_force = self.k_normal * defo * self.normal
+
+        # If you want to use numba, use the following code
+        # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
+
+
+# @jit(nopython=True)  # type: ignore
+# def calc_NormalForce_JIT(pos1, pos2, normal, edge_length, k_normal) -> Vector3D:
+#     '''
+#     Calculates the normal force between two nodes
+#     '''
+#     defo = norm(pos2 - pos1) - edge_length
+#     return k_normal * defo * normal
