@@ -34,4 +34,5 @@ def normalise(a: Vector3D) -> Vector3D:
     len = norm(a)
     if len == 0.0:
         raise ZeroDivisionError("Cannot normalise a zero vector")
-    return a / len if len != 0 else a
+    res: Vector3D = a / len
+    return res
