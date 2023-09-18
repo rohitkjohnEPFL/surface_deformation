@@ -2,7 +2,7 @@
 import numpy as np
 from attrs import define, field
 from numba import jit
-from yadeGrid.yadeTypes import Vector3D, F64
+from yadeGrid.yadeTypes import Vector3D, F64, QuatComps
 from yadeGrid.vectorFunc import norm
 from numpy.typing import NDArray
 from typing import Any
@@ -58,7 +58,7 @@ class Quaternion:
         return self.conjugate() / self.norm()**2
 
     def conv_2axisAngle(self) -> 'AxisAngle':
-
+        self.normalize()
         angle = 2 * np.arccos(self.a)
         axis = np.array([self.b, self.c, self.d])
         axisNorm = norm(axis)
@@ -77,8 +77,8 @@ class Quaternion:
 # JIT functions are given ndarray as input and output. The methods in quaternion functions
 # handle the task of constructing the quaternion from returned the ndarray
 @jit(nopython=True)  # type: ignore
-def multiply_quat(q1, q2):
-    result = np.zeros(4, dtype=np.float64)
+def multiply_quat(q1: QuatComps, q2: QuatComps) -> QuatComps:
+    result: QuatComps = np.zeros(4, dtype=np.float64)
     result[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]
     result[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]
     result[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]
@@ -89,8 +89,8 @@ def multiply_quat(q1, q2):
 
 # -------------------------------------------------------------------------------------- norm_quat #
 @jit(nopython=True)  # type: ignore
-def norm_quat(q1):
-    return np.sqrt(q1[0]**2 + q1[1]**2 + q1[2]**2 + q1[3]**2)
+def norm_quat(q1: QuatComps) -> F64:
+    return F64(np.sqrt(q1[0]**2 + q1[1]**2 + q1[2]**2 + q1[3]**2))
 
 
 # ------------------------------------------------------------------------------------------------ #
