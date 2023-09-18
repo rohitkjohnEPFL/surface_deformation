@@ -1,7 +1,7 @@
 # Import all the necessary modules
 import numpy as np
 from attrs import define, field
-from yadeGrid.body import Body, Quaternion
+from yadeGrid.body import Body, Quaternion, AxisAngle
 from yadeGrid.vectorFunc import norm, normalise, dotProduct
 from yadeGrid.yadeTypes import Vector3D, F64
 # from numba import jit
@@ -23,8 +23,11 @@ class Interaction:
     k_torsion: F64   = field(default=0.0)
     normal: Vector3D        = field(default=np.array([0, 0, 0]))
     edge_length: F64 = field(default=0.0)
+
+    # Calculated states
     relative_pos: Vector3D  = field(default=np.array([0, 0, 0], dtype=F64))
     relative_ori: Quaternion = field(default=Quaternion())
+    relative_ori_AA: AxisAngle = field(default=AxisAngle())
 
     # Default initialised attributes
     normal_force: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
@@ -35,7 +38,7 @@ class Interaction:
     normal_defo: F64         = field(default=0.0)
     shear_defo: Vector3D     = field(default=np.array([0, 0, 0], dtype=F64))
     bending_defo: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
-    torsion_defo: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
+    torsion_defo: F64        = field(default=0.0)
 
     def __attrs_post_init__(self) -> None:
         '''
@@ -101,9 +104,13 @@ class Interaction:
         self.torsion_moment = np.array([0, 0, 0], dtype=F64)
 
     def calc_ForcesTorques(self) -> None:
+        # The force is calculated with respect to body 1.
+        # The force on body 2 is the negative of this force
         self.update_normal()
         self.update_relativePos()
         self.calc_NormalForce()
+        self.calc_torsionMoment()
+        self.calc_bendingMoment()
 
 
     def update_normal(self) -> None:
@@ -115,19 +122,31 @@ class Interaction:
         ori2 = self.body2.ori
         ori1_inv = ori1.inverse()
         self.relative_ori = ori1_inv * ori2
+        self.relative_ori_AA = self.relative_ori.conv_2axisAngle()
 
     # @jit(nopython=True)  # type: ignore
     def calc_NormalForce(self) -> None:
+        # The force is calculated with respect to body 1.
+        # The force on body 2 is the negative of this force
         defo              = norm(self.body2.pos - self.body1.pos) - self.edge_length
+        self.normal_defo  = defo
         self.normal_force = self.k_normal * defo * self.normal
 
         # If you want to use numba, use the following code
         # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
 
     def calc_torsionMoment(self) -> None:
-        axisAngle = self.relative_ori.conv_2axisAngle()
-        twist     = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
+        axisAngle  = self.relative_ori_AA
+        print(axisAngle)
+        twist: F64 = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
+        self.torsion_defo = twist
         self.torsion_moment = self.k_torsion * twist * self.normal
+
+    def calc_bendingMoment(self) -> None:
+        axisAngle: AxisAngle = self.relative_ori_AA
+        bending: Vector3D    = axisAngle.angle * axisAngle.axis - self.torsion_defo * self.normal
+        self.bending_defo    = bending
+        self.bending_moment  = self.k_bending * bending
 
 
 # @jit(nopython=True)  # type: ignore

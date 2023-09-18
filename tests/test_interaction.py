@@ -335,6 +335,7 @@ class test_Interaction(TestCase):
         ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
 
         relative_ori = ori1Inv * ori2
+        relative_ori.normalize()
 
         pos1    = np.array([0, 0, 0], dtype=F64)
         pos2    = np.array([1, 0, 0], dtype=F64)
@@ -348,7 +349,48 @@ class test_Interaction(TestCase):
         self.assertEqual(inter.relative_ori, relative_ori)
         assert_array_equal(inter.relative_pos, relative_pos)
 
-    def test_bendingMomentYade(self) -> None:
+    def test_torsionMoment(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+
+        # Check normal force
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_torsionMoment()
+        assert_array_equal(inter.torsion_moment, np.array([0, 0, 0], dtype=F64))
+
+        # Rotate body 2 perpendicular to normal and ckech torsion
+        ang1    = np.pi / 4
+        axis1   = normalise(np.array([0, 0, 1], dtype=F64))
+        ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
+
+        b2.ori = ori1
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_torsionMoment()
+        assert_almost_equal(inter.torsion_moment, np.array([0, 0, 0], dtype=F64))
+
+        # Rotate body 2 along normal and check torsion
+        ang2    = np.pi / 20
+        axis2   = normalise(np.array([1, 0, 0], dtype=F64))
+        ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
+
+        b2.ori = ori2
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_torsionMoment()
+        MomentExp = inter.normal * ang2 * inter.k_torsion
+        assert_almost_equal(inter.torsion_moment, MomentExp)
+
+    def test_torsionMomentYade(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -379,3 +421,85 @@ class test_Interaction(TestCase):
             momentCalc.append(-inter.torsion_moment[0])
 
         assert_array_almost_equal(momentCalc, yadeMoment)
+
+    def test_bendingMoment(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+
+        # Check normal force
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_NormalForce()
+        inter.calc_torsionMoment()
+        inter.calc_bendingMoment()
+        assert_array_equal(inter.bending_moment, np.array([0, 0, 0], dtype=F64))
+
+        # Rotate body 2 parallel to normal and ckech bending
+        ang1    = np.pi / 4
+        axis1   = normalise(np.array([1, 0, 0], dtype=F64))
+        ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
+
+        b2.ori = ori1
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_NormalForce()
+        inter.calc_torsionMoment()
+        inter.calc_bendingMoment()
+        assert_almost_equal(inter.bending_moment, np.array([0, 0, 0], dtype=F64))
+
+        # Rotate body 2 along normal and check torsion
+        ang2    = np.pi / 20
+        axis2   = normalise(np.array([0, 1, 0], dtype=F64))
+        ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
+
+        b2.ori = ori2
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_NormalForce()
+        inter.calc_torsionMoment()
+        inter.calc_bendingMoment()
+        MomentExp = axis2 * ang2 * inter.k_bending
+        assert_almost_equal(inter.bending_moment, MomentExp)
+
+
+    def test_bendingMomentYade(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+
+        with open(".\\tests\\bendingMomentTest.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+            yadeResultMoment: list[list[float]] = yadeResult["moment"]
+
+        yadeOri   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+        yadeMoment = yadeResultMoment
+
+        momentCalc = []
+        for ori in yadeOri:
+            b2.ori = ori
+            inter.update_normal()
+            inter.update_relativePos()
+            inter.calc_torsionMoment()
+            inter.calc_bendingMoment()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            momentCalc.append(-inter.bending_moment[1])
+
+        assert_array_almost_equal(momentCalc, yadeMoment)
+
+    # TODO test bending moment calculated not from YADE
