@@ -26,3 +26,12 @@ def dotProduct(a: Vector3D, b: Vector3D) -> F64:
 def norm(a: Vector3D) -> F64:
     """Norm of a vector"""
     return F64(np.sqrt(dotProduct(a, a)))
+
+
+@jit(nopython=True)  # type: ignore
+def normalise(a: Vector3D) -> Vector3D:
+    """Normalise a vector"""
+    len = norm(a)
+    if len == 0.0:
+        raise ZeroDivisionError("Cannot normalise a zero vector")
+    return a / len if len != 0 else a

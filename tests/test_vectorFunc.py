@@ -1,4 +1,4 @@
-from yadeGrid.vectorFunc import crossProduct, dotProduct, norm
+from yadeGrid.vectorFunc import crossProduct, dotProduct, norm, normalise
 from yadeGrid.yadeTypes import F64
 from numpy import array
 from unittest import TestCase
@@ -72,3 +72,23 @@ class test_norm(TestCase):
         vec3 = array([1., 1., 1.])
         assert_almost_equal(norm(vec2), F64(1.4142135623730951))
         assert_almost_equal(norm(vec3), F64(1.7320508075688772))
+
+
+class test_normalise(TestCase):
+    def test_normalise(self):
+        vec1    = array([1., 2., 3.])
+        vec1ans = array([0.2672612419124244, 0.5345224838248488, 0.8017837257372732])
+        assert_array_equal(normalise(vec1), vec1ans)
+
+    def test_withUnitVectors(self):
+        vecx   = array([1., 0., 0.])
+        vecy   = array([0., 1., 0.])
+        vecz   = array([0., 0., 1.])
+        assert_array_equal(normalise(vecx), vecx)
+        assert_array_equal(normalise(vecy), vecy)
+        assert_array_equal(normalise(vecz), vecz)
+
+    def test_withZeroVector(self):
+        vec0 = array([0., 0., 0.])
+        with self.assertRaises(ZeroDivisionError):
+            normalise(vec0)
