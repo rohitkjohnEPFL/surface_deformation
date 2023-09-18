@@ -133,6 +133,19 @@ class Body:
     force: Vector3D    = field(default=np.array([0, 0, 0]))   # Force acting on the body
     torque: Vector3D   = field(default=np.array([0, 0, 0]))   # Torque acting on the body
 
+    # Simulation parameters
+    DynamicQ: bool = field(default=False)   # Whether the body is affected by forces or not
+    BlockedDOFs: str = field(default="")    # Which degrees of freedom are blocked, e.g. "xyz" or "xyzXYZ"
+                                            # x, y, z, X, Y, Z correspond to the 6 DOFs of the body
+                                            # x, y, z are the translational DOFs
+                                            # X, Y, Z are the rotational DOFs
+
     def reset_forceTorque(self) -> None:
         self.force  = np.array([0, 0, 0])
         self.torque = np.array([0, 0, 0])
+
+    def add_Forces(self, force: Vector3D) -> None:
+        self.force = self.force + force
+
+    def add_Torques(self, torque: Vector3D) -> None:
+        self.torque = self.torque + torque

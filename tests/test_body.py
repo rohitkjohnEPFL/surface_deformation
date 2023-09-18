@@ -32,6 +32,56 @@ class test_body(TestCase):
         assert_array_equal(body.force, np.array([0, 0, 0]))
         assert_array_equal(body.torque, np.array([0, 0, 0]))
 
+    def test_addForce(self):
+        body = Body()
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
+
+        vec1 = np.array([1, 2, 3])
+        vec2 = np.array([4, 5, 6])
+
+        body.add_Forces(vec1)
+        assert_array_equal(body.force, vec1)
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
+
+        body.add_Forces(vec2)
+        assert_array_equal(body.force, vec1 + vec2)
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
+
+    def test_addTorque(self):
+        body = Body()
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
+
+        vec1 = np.array([1, 2, 3])
+        vec2 = np.array([4, 5, 6])
+
+        body.add_Torques(vec1)
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, vec1)
+
+        body.add_Torques(vec2)
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, vec1 + vec2)
+
+    def test_addForceTorques(self):
+        body = Body()
+        assert_array_equal(body.force, np.array([0, 0, 0]))
+        assert_array_equal(body.torque, np.array([0, 0, 0]))
+
+        vec1 = np.array([1, 2, 3])
+        vec2 = np.array([4, 5, 6])
+
+        body.add_Forces(vec1)
+        body.add_Torques(vec2)
+        assert_array_equal(body.force, vec1)
+        assert_array_equal(body.torque, vec2)
+
+        body.add_Forces(vec2)
+        body.add_Torques(vec1)
+        assert_array_equal(body.force, vec1 + vec2)
+        assert_array_equal(body.torque, vec1 + vec2)
+
 
 # ------------------------------------------------------------------------------------------------ #
 #                                                                                  TEST_QUATERNION #
