@@ -13,24 +13,24 @@ from typing import Any
 # ------------------------------------------------------------------------------------------------ #
 @define
 class Quaternion:
-    components: NDArray[np.float64] = field(default=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64))
+    components: NDArray[F64] = field(default=np.array([1.0, 0.0, 0.0, 0.0], dtype=F64))
     # This way we can pass the quaternion as ndarray to JITed functions
 
     @property
-    def a(self) -> np.float64:
-        return np.float64(self.components[0])
+    def a(self) -> F64:
+        return F64(self.components[0])
 
     @property
-    def b(self) -> np.float64:
-        return np.float64(self.components[1])
+    def b(self) -> F64:
+        return F64(self.components[1])
 
     @property
-    def c(self) -> np.float64:
-        return np.float64(self.components[2])
+    def c(self) -> F64:
+        return F64(self.components[2])
 
     @property
-    def d(self) -> np.float64:
-        return np.float64(self.components[3])
+    def d(self) -> F64:
+        return F64(self.components[3])
 
     def __eq__(self, other: Any) -> bool:
         if other.__class__ is not self.__class__:
@@ -47,7 +47,7 @@ class Quaternion:
     def conjugate(self) -> 'Quaternion':
         return Quaternion(self.components * np.array([1, -1, -1, -1]))
 
-    def norm(self) -> np.float64:
+    def norm(self) -> F64:
         return F64(norm_quat(self.components))
 
     def normalize(self) -> None:
@@ -66,7 +66,7 @@ class Quaternion:
             axis = axis / axisNorm
         return AxisAngle(axis=axis, angle=angle)
 
-    def __truediv__(self, scalar: np.float64) -> 'Quaternion':
+    def __truediv__(self, scalar: F64) -> 'Quaternion':
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide Quaternion by zero")
 
@@ -78,7 +78,7 @@ class Quaternion:
 # handle the task of constructing the quaternion from returned the ndarray
 @jit(nopython=True)  # type: ignore
 def multiply_quat(q1: QuatComps, q2: QuatComps) -> QuatComps:
-    result: QuatComps = np.zeros(4, dtype=np.float64)
+    result: QuatComps = np.zeros(4, dtype=F64)
     result[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]
     result[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]
     result[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]
@@ -132,10 +132,10 @@ class Body:
     angVel: Vector3D   = field(default=np.array([0, 0, 0]))   # Angular velocity of the body
 
     # Constant variables
-    density: np.float64     = field(default=1.0)           # Density of the body
-    mass: np.float64        = field(default=0.0)           # Mass of the body
-    radius: np.float64      = field(default=0.0)           # Radius of the body
-    inertia: np.float64     = field(default=0.0)           # Diagonal inertia tensor of the body
+    density: F64     = field(default=1.0)           # Density of the body
+    mass: F64        = field(default=0.0)           # Mass of the body
+    radius: F64      = field(default=0.0)           # Radius of the body
+    inertia: F64     = field(default=0.0)           # Diagonal inertia tensor of the body
     id: int                 = field(default=0)             # Id of the body
 
     # Force variables
