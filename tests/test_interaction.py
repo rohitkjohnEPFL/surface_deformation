@@ -19,8 +19,9 @@ class test_Interaction(TestCase):
         body1 = Body(pos=pos1, radius=rad, density=density)
         body2 = Body(pos=pos2, radius=rad, density=density)
         body3 = Body(pos=pos3, radius=rad, density=density)
-        inter1 = Interaction(body1, body2, young_mod=young, poisson=poisson)
-        inter2 = Interaction(body2, body3, young_mod=young, poisson=poisson)
+        dt: F64 = F64(1e-6)
+        inter1 = Interaction(body1, body2, dt, young_mod=young, poisson=poisson)
+        inter2 = Interaction(body2, body3, dt, young_mod=young, poisson=poisson)
 
         self.assertEqual(inter1.body1, body1)
         self.assertEqual(inter1.body2, body2)
@@ -37,7 +38,8 @@ class test_Interaction(TestCase):
 
         body1 = Body(pos=pos1, radius=rad, density=density)
         body2 = Body(pos=pos2, radius=rad, density=density)
-        inter1 = Interaction(body1, body2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter1 = Interaction(body1, body2, dt, young_mod=young, poisson=poisson)
         self.assertEqual(inter1.edge_length, 1.0)
 
     def test_initialisation_bodyMass(self) -> None:
@@ -60,8 +62,9 @@ class test_Interaction(TestCase):
         body1 = Body(pos=pos1, radius=rad, density=density)
         body2 = Body(pos=pos2, radius=rad, density=density)
         body3 = Body(pos=pos3, radius=rad, density=density)
-        Interaction(body1, body2, young_mod=young, poisson=poisson)
-        Interaction(body2, body3, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        Interaction(body1, body2, dt, young_mod=young, poisson=poisson)
+        Interaction(body2, body3, dt, young_mod=young, poisson=poisson)
 
         self.assertEqual(body1.mass, halfMass_12)
         self.assertEqual(body2.mass, halfMass_12 + halfMass_23)
@@ -89,8 +92,9 @@ class test_Interaction(TestCase):
         body1 = Body(pos=pos1, radius=rad, density=density)
         body2 = Body(pos=pos2, radius=rad, density=density)
         body3 = Body(pos=pos3, radius=rad, density=density)
-        Interaction(body1, body2, young_mod=young, poisson=poisson)
-        Interaction(body2, body3, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        Interaction(body1, body2, dt, young_mod=young, poisson=poisson)
+        Interaction(body2, body3, dt, young_mod=young, poisson=poisson)
 
         self.assertEqual(body1.inertia, geomInert_12)
         self.assertEqual(body2.inertia, geomInert_12 + geomInert_23)
@@ -117,8 +121,9 @@ class test_Interaction(TestCase):
         body1 = Body(pos=pos1, radius=rad, density=density)
         body2 = Body(pos=pos2, radius=rad, density=density)
         body3 = Body(pos=pos3, radius=rad, density=density)
-        inter1 = Interaction(body1, body2, young_mod=young, poisson=poisson)
-        inter2 = Interaction(body2, body3, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter1 = Interaction(body1, body2, dt, young_mod=young, poisson=poisson)
+        inter2 = Interaction(body2, body3, dt, young_mod=young, poisson=poisson)
 
         # Check shear modulus
         shear_mod = young / (2 * (1 + poisson))
@@ -207,8 +212,9 @@ class test_Interaction(TestCase):
         body1 = Body(pos=pos1, radius=rad, density=density)
         body2 = Body(pos=pos2, radius=rad, density=density)
         body3 = Body(pos=pos3, radius=rad, density=density)
-        inter1 = Interaction(body1, body2, young_mod=young, poisson=poisson)
-        inter2 = Interaction(body2, body3, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter1 = Interaction(body1, body2, dt, young_mod=young, poisson=poisson)
+        inter2 = Interaction(body2, body3, dt, young_mod=young, poisson=poisson)
 
         # Check mass and inertia
         assert_almost_equal(body1.mass, 42.41150082346221)
@@ -239,23 +245,24 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         # Check normal vector
         norm1 = normalise(pos2 - pos1)
-        assert_almost_equal(inter.normal, norm1)
+        assert_almost_equal(inter.curr_normal, norm1)
 
         # Checking update normal
         pos3   = np.array([0, 1, 0], dtype=F64)
         b1.pos = np.array(pos3, dtype=F64)
         norm2  = normalise(pos2 - pos3)
-        inter.update_normal()
-        assert_almost_equal(inter.normal, norm2)
+        inter.update_currNormal()
+        assert_almost_equal(inter.curr_normal, norm2)
 
         # Checking update raises ZeroDivisionError
         b1.pos = np.array([1, 0, 0], dtype=F64)
         with self.assertRaises(ZeroDivisionError):
-            inter.update_normal()
+            inter.update_currNormal()
 
     def test_normalForceCalculation(self) -> None:
         rad     = F64(0.1)
@@ -266,24 +273,25 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         # Check normal force
-        inter.update_normal()
+        inter.update_currNormal()
         inter.calc_NormalForce()
         assert_array_equal(inter.normal_force, np.array([0, 0, 0], dtype=F64))
 
         # Rotate body 2 and check normal force
         pos3 = np.array([0, 1, 0], dtype=F64)
         b2.pos = pos3
-        inter.update_normal()
+        inter.update_currNormal()
         inter.calc_NormalForce()
         assert_almost_equal(inter.normal_force, np.array([0, 0, 0], dtype=F64))
 
         # Move body 2 and check normal force
         pos4 = np.array([1.5, 0, 0], dtype=F64)
         b2.pos = pos4
-        inter.update_normal()
+        inter.update_currNormal()
         inter.calc_NormalForce()
         forceExp = (pos4 - np.array([1, 0, 0], dtype=F64)) * inter.k_normal
         assert_almost_equal(inter.normal_force, forceExp)
@@ -297,7 +305,8 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
 
         with open(".\\tests\\yadeResults\\normalForceTest.json", "r") as file:
@@ -309,7 +318,7 @@ class test_Interaction(TestCase):
         forceCalc = []
         for pos in yadePos:
             b2.pos = np.array([pos, 0., 0.], dtype=F64)
-            inter.update_normal()
+            inter.update_currNormal()
             inter.calc_NormalForce()
 
             # Minus because force is calculated in terms of body 1 and it is equal and opposite
@@ -343,7 +352,8 @@ class test_Interaction(TestCase):
 
         b1 = Body(pos=pos1, radius=rad, density=density, ori=ori1)
         b2 = Body(pos=pos2, radius=rad, density=density, ori=ori2)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
         inter.update_relativePos()
 
         self.assertEqual(inter.relative_ori, relative_ori)
@@ -359,10 +369,11 @@ class test_Interaction(TestCase):
 
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         # Check normal force
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_torsionMoment()
         assert_array_equal(inter.torsion_moment, np.array([0, 0, 0], dtype=F64))
@@ -373,7 +384,7 @@ class test_Interaction(TestCase):
         ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
 
         b2.ori = ori1
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_torsionMoment()
         assert_almost_equal(inter.torsion_moment, np.array([0, 0, 0], dtype=F64))
@@ -384,10 +395,10 @@ class test_Interaction(TestCase):
         ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
 
         b2.ori = ori2
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_torsionMoment()
-        MomentExp = inter.normal * ang2 * inter.k_torsion
+        MomentExp = inter.curr_normal * ang2 * inter.k_torsion
         assert_almost_equal(inter.torsion_moment, MomentExp)
 
     def test_torsionMomentYade(self) -> None:
@@ -399,7 +410,8 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         with open(".\\tests\\yadeResults\\torsionMomentTestAngVel_5e4.json", "r") as file:
             yadeResult = json.load(file)
@@ -412,7 +424,7 @@ class test_Interaction(TestCase):
         momentCalc = []
         for ori in yadeOri:
             b2.ori = ori
-            inter.update_normal()
+            inter.update_currNormal()
             inter.update_relativePos()
             inter.calc_torsionMoment()
 
@@ -431,10 +443,11 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         # Check normal force
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_NormalForce()
         inter.calc_torsionMoment()
@@ -447,7 +460,7 @@ class test_Interaction(TestCase):
         ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
 
         b2.ori = ori1
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_NormalForce()
         inter.calc_torsionMoment()
@@ -460,7 +473,7 @@ class test_Interaction(TestCase):
         ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
 
         b2.ori = ori2
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_NormalForce()
         inter.calc_torsionMoment()
@@ -478,7 +491,8 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         with open(".\\tests\\yadeResults\\bendingMomentTest.json", "r") as file:
             yadeResult = json.load(file)
@@ -491,7 +505,7 @@ class test_Interaction(TestCase):
         momentCalc = []
         for ori in yadeOri:
             b2.ori = ori
-            inter.update_normal()
+            inter.update_currNormal()
             inter.update_relativePos()
             inter.calc_torsionMoment()
             inter.calc_bendingMoment()
@@ -511,7 +525,8 @@ class test_Interaction(TestCase):
         pos2: Vector3D    = np.array([1, 0, 0], dtype=F64)
         b1: Body           = Body(pos=pos1, radius=rad, density=density)
         b2: Body           = Body(pos=pos2, radius=rad, density=density)
-        inter: Interaction = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt: F64            = F64(1e-6)
+        inter: Interaction = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         normal: Vector3D = np.array([1, 0, 0], dtype=F64)
 
@@ -528,7 +543,7 @@ class test_Interaction(TestCase):
         bendingExpected: Vector3D = bending * inter.k_bending
 
         # Interaction calculating moment
-        inter.update_normal()
+        inter.update_currNormal()
         inter.update_relativePos()
         inter.calc_torsionMoment()
         inter.calc_bendingMoment()
@@ -545,7 +560,9 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+        dt = 1e-6
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
         with open(".\\tests\\yadeResults\\torsionBendingTest.json", "r") as file:
             yadeResult = json.load(file)
@@ -559,7 +576,7 @@ class test_Interaction(TestCase):
         bendingCalc: list[Vector3D] = []
         for ori in yadeOri:
             b2.ori = ori
-            inter.update_normal()
+            inter.update_currNormal()
             inter.update_relativePos()
             inter.calc_torsionMoment()
             inter.calc_bendingMoment()
@@ -571,3 +588,112 @@ class test_Interaction(TestCase):
 
         assert_array_almost_equal(torsionCalc, yadeResultTorsionMoment)
         assert_array_almost_equal(bendingCalc, yadeResultBendingMoment)
+
+    def test_shearIncrementPerpLinearVelocity(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+
+        with open(".\\tests\\yadeResults\\shearPerpLinearVel.json", "r") as file:
+            yadeResult = json.load(file)
+
+        yadePos   = yadeResult["pos"]
+        yadeVel   = yadeResult["vels"]
+        yadeDus   = yadeResult["shearInc"]
+
+        shearIncs = []
+        for pos, vel in zip(yadePos, yadeVel):
+            b2.pos = np.array(pos, dtype=F64)
+            b2.vel = np.array(vel, dtype=F64)
+            inter.update_currNormal()
+            inter.calc_NormalForce()
+            inter.calc_ShearForce()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            shearIncs.append(inter.shearInc)
+
+        assert_array_equal(shearIncs, yadeDus)
+
+    def test_shearIncrementAngularVelocity_body2(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+
+        with open(".\\tests\\yadeResults\\shearPerpAngVel_body1.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+
+        yadeOri   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+        yadeVel   = yadeResult["vels"]
+        yadeDus   = yadeResult["shearInc"]
+
+
+        shearIncs = []
+        for ori, vel in zip(yadeOri, yadeVel):
+            b2.ori = ori
+            b2.angVel = np.array(vel, dtype=F64)
+            inter.update_currNormal()
+            inter.calc_NormalForce()
+            inter.calc_ShearForce()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            shearIncs.append(inter.shearInc)
+
+        assert_array_equal(shearIncs, yadeDus)
+
+
+    def test_shearIncrementAngularVelocity_body1(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+
+        with open(".\\tests\\yadeResults\\shearPerpAngVel_body0.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+
+        yadeOri   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+        yadeVel   = yadeResult["vels"]
+        yadeDus   = yadeResult["shearInc"]
+
+
+        shearIncs = []
+        for ori, vel in zip(yadeOri, yadeVel):
+            b1.ori = ori
+            b1.angVel = np.array(vel, dtype=F64)
+            inter.update_currNormal()
+            inter.calc_NormalForce()
+            inter.calc_ShearForce()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            shearIncs.append(inter.shearInc)
+
+        assert_array_equal(shearIncs, yadeDus)
+    
+

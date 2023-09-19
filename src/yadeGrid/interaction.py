@@ -2,7 +2,7 @@
 import numpy as np
 from attrs import define, field
 from yadeGrid.body import Body, Quaternion, AxisAngle
-from yadeGrid.vectorFunc import norm, normalise, dotProduct
+from yadeGrid.vectorFunc import norm, normalise, dotProduct, crossProduct
 from yadeGrid.yadeTypes import Vector3D, F64
 # from numba import jit
 
@@ -12,6 +12,7 @@ class Interaction:
     # Required attributes
     body1: Body
     body2: Body
+    dt: F64
     young_mod: F64   = field(default=70e9)  # Aluminium
     poisson: F64     = field(default=0.35)  # Aluminium
 
@@ -21,13 +22,19 @@ class Interaction:
     k_shear: F64     = field(default=0.0)
     k_bending: F64   = field(default=0.0)
     k_torsion: F64   = field(default=0.0)
-    normal: Vector3D        = field(default=np.array([0, 0, 0]))
     edge_length: F64 = field(default=0.0)
 
     # Calculated states
     relative_pos: Vector3D  = field(default=np.array([0, 0, 0], dtype=F64))
     relative_ori: Quaternion = field(default=Quaternion())
     relative_ori_AA: AxisAngle = field(default=AxisAngle())
+    orthonormal_axis: Vector3D = field(default=np.array([0, 0, 0], dtype=F64))
+    twist_axis: Vector3D       = field(default=np.array([0, 0, 0], dtype=F64))
+    prev_normal: Vector3D      = field(default=np.array([0, 0, 0], dtype=F64))
+    curr_normal: Vector3D      = field(default=np.array([0, 0, 0]))
+    relativeVelocity: Vector3D = field(default=np.array([0, 0, 0], dtype=F64))
+    shearInc: Vector3D         = field(default=np.array([0, 0, 0], dtype=F64))
+
 
     # Default initialised attributes
     normal_force: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
@@ -70,7 +77,8 @@ class Interaction:
 
 
         # Calculating the normal vector, 2 wrt 1
-        self.normal = (self.body2.pos - self.body1.pos) / edge_length
+        self.curr_normal = (self.body2.pos - self.body1.pos) / edge_length
+        self.prev_normal = self.curr_normal
 
 
         # calculating the stiffnesses
@@ -106,15 +114,18 @@ class Interaction:
     def calc_ForcesTorques(self) -> None:
         # The force is calculated with respect to body 1.
         # The force on body 2 is the negative of this force
-        self.update_normal()
+        self.update_currNormal()
         self.update_relativePos()
         self.calc_NormalForce()
         self.calc_torsionMoment()
         self.calc_bendingMoment()
+        
 
 
-    def update_normal(self) -> None:
-        self.normal = normalise(self.body2.pos - self.body1.pos)
+    def update_currNormal(self) -> None:
+        # print(self.body2.pos)
+        # print(self.body1.pos)
+        self.curr_normal = normalise(self.body2.pos - self.body1.pos)
 
     def update_relativePos(self) -> None:
         self.relative_pos = self.body2.pos - self.body1.pos
@@ -130,24 +141,64 @@ class Interaction:
         # The force on body 2 is the negative of this force
         defo              = norm(self.body2.pos - self.body1.pos) - self.edge_length
         self.normal_defo  = defo
-        self.normal_force = self.k_normal * defo * self.normal
+        self.normal_force = self.k_normal * defo * self.curr_normal
 
         # If you want to use numba, use the following code
         # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
 
     def calc_torsionMoment(self) -> None:
         axisAngle: AxisAngle  = self.relative_ori_AA
-        twist: F64            = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
-        print(twist)
+        twist: F64            = axisAngle.angle * dotProduct(axisAngle.axis, self.curr_normal)
         self.torsion_defo   = twist
-        self.torsion_moment = self.k_torsion * twist * self.normal
+        self.torsion_moment = self.k_torsion * twist * self.curr_normal
 
     def calc_bendingMoment(self) -> None:
         axisAngle: AxisAngle = self.relative_ori_AA
-        twist: F64           = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
-        bending: Vector3D    = axisAngle.angle * axisAngle.axis - twist * self.normal
+        twist: F64           = axisAngle.angle * dotProduct(axisAngle.axis, self.curr_normal)
+        bending: Vector3D    = axisAngle.angle * axisAngle.axis - twist * self.curr_normal
         self.bending_defo    = bending
         self.bending_moment  = self.k_bending * bending
+
+    def precompute_ForShear(self) -> None:
+        '''To compute the shear increment, shear force is calculated using an incremental formulation
+
+        see: https://www.sciencedirect.com/science/article/pii/S0925857413001936?via%3Dihub
+
+        for the implementation
+
+        check the bool Law2_ScGeom6D_CohFrictPhys_CohesionMoment::go() function in 
+        https://gitlab.com/yade-dev/trunk/-/blob/master/pkg/dem/CohesiveFrictionalContactLaw.cpp?ref_type=heads'''
+        self.orthonormal_axis = np.cross(self.prev_normal, self.curr_normal)
+        angle                 = 0.5 * dotProduct(self.body1.angVel + self.body2.angVel, self.curr_normal)
+        self.twist_axis       = angle * self.curr_normal
+        realtiveVel           = self.calc_IncidentVel()
+        realtiveVel           = realtiveVel - dotProduct(realtiveVel, self.curr_normal) * self.curr_normal
+        self.shearInc         = realtiveVel * self.dt
+
+    def calc_IncidentVel(self) -> Vector3D:
+        rad: F64 = self.body1.radius
+        center2center_dist: F64  = norm(self.body2.pos - self.body1.pos)
+        penetrationDepth: F64    = 2.0 * rad - center2center_dist
+
+        # This alpha value is used to avoid granular ratcheting.
+        # See the Vector3r ScGeom::getIncidentVel() function in
+        # https://gitlab.com/yade-dev/trunk/-/blob/master/pkg/dem/ScGeom.cpp?ref_type=heads
+        # around line 66
+        alpha: F64               = (rad + rad) / (rad + rad - penetrationDepth)
+
+        tangentialVel2: Vector3D = crossProduct(self.body2.angVel, - rad * self.curr_normal)
+        tangentialVel1: Vector3D = crossProduct(self.body1.angVel,   rad * self.curr_normal)
+        relativeVelocity = (self.body2.vel - self.body1.vel) * alpha + tangentialVel2 - tangentialVel1
+        return relativeVelocity
+
+    def rotate_shearForce(self) -> None:
+        self.shear_force = self.shear_force - crossProduct(self.shear_force, self.orthonormal_axis)
+        self.shear_force = self.shear_force - crossProduct(self.shear_force, self.twist_axis)
+
+    def calc_ShearForce(self) -> None:
+        self.precompute_ForShear()
+        self.rotate_shearForce()
+        self.shear_force = self.shear_force - self.k_shear * self.shearInc
 
 
 # @jit(nopython=True)  # type: ignore
