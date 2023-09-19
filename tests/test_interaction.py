@@ -300,7 +300,7 @@ class test_Interaction(TestCase):
         inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
 
 
-        with open(".\\tests\\normalForceTest.json", "r") as file:
+        with open(".\\tests\\yadeResults\\normalForceTest.json", "r") as file:
             yadeResult = json.load(file)
 
         yadePos   = yadeResult["pos"]
@@ -401,7 +401,7 @@ class test_Interaction(TestCase):
         b2 = Body(pos=pos2, radius=rad, density=density)
         inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
 
-        with open(".\\tests\\torsionMomentTestAngVel_5e4.json", "r") as file:
+        with open(".\\tests\\yadeResults\\torsionMomentTestAngVel_5e4.json", "r") as file:
             yadeResult = json.load(file)
             yadeResultOri: list[list[float]] = yadeResult["ori"]
             yadeResultMoment: list[list[float]] = yadeResult["moment"]
@@ -480,7 +480,7 @@ class test_Interaction(TestCase):
         b2 = Body(pos=pos2, radius=rad, density=density)
         inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
 
-        with open(".\\tests\\bendingMomentTest.json", "r") as file:
+        with open(".\\tests\\yadeResults\\bendingMomentTest.json", "r") as file:
             yadeResult = json.load(file)
             yadeResultOri: list[list[float]] = yadeResult["ori"]
             yadeResultMoment: list[list[float]] = yadeResult["moment"]
