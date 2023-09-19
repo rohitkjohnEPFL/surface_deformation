@@ -1,5 +1,5 @@
-from yadeGrid import Body, Interaction, F64, Quaternion
-from yadeGrid.vectorFunc import normalise
+from yadeGrid import Body, Interaction, F64, Quaternion, Vector3D
+from yadeGrid.vectorFunc import normalise, dotProduct
 from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_array_equal, assert_array_almost_equal
@@ -502,4 +502,72 @@ class test_Interaction(TestCase):
 
         assert_array_almost_equal(momentCalc, yadeMoment)
 
-    # TODO test bending moment calculated not from YADE
+    def test_bendingAndTwisting(self) -> None:
+        rad: F64     = F64(0.1)
+        density: F64 = F64(2700.0)
+        young: F64   = F64(70e9)
+        poisson: F64 = F64(0.35)
+        pos1: Vector3D    = np.array([0, 0, 0], dtype=F64)
+        pos2: Vector3D    = np.array([1, 0, 0], dtype=F64)
+        b1: Body           = Body(pos=pos1, radius=rad, density=density)
+        b2: Body           = Body(pos=pos2, radius=rad, density=density)
+        inter: Interaction = Interaction(b1, b2, young_mod=young, poisson=poisson)
+
+        normal: Vector3D = np.array([1, 0, 0], dtype=F64)
+
+        ang1    = np.pi / 4
+        axis1   = normalise(np.array([1, 1, 0], dtype=F64))
+        ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
+        b2.ori = ori1
+
+        # Calculating expected moment
+        twist: F64        = ang1 * dotProduct(normal, axis1)
+        bending: Vector3D = ang1 * axis1 - twist * normal
+
+        torsionExpexted: Vector3D = twist   * inter.k_torsion * normal
+        bendingExpected: Vector3D = bending * inter.k_bending
+
+        # Interaction calculating moment
+        inter.update_normal()
+        inter.update_relativePos()
+        inter.calc_torsionMoment()
+        inter.calc_bendingMoment()
+
+        assert_array_almost_equal(inter.torsion_moment, torsionExpexted)
+        assert_array_almost_equal(inter.bending_moment, bendingExpected)
+
+    def test_bendingAndTwistingYade(self):
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        inter = Interaction(b1, b2, young_mod=young, poisson=poisson)
+
+        with open(".\\tests\\yadeResults\\torsionBendingTest.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+            yadeResultTorsionMoment: list[list[float]] = yadeResult["torsion_moment"]
+            yadeResultBendingMoment: list[list[float]] = yadeResult["bending_moment"]
+
+        yadeOri: list[Quaternion]   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+
+        torsionCalc: list[Vector3D] = []
+        bendingCalc: list[Vector3D] = []
+        for ori in yadeOri:
+            b2.ori = ori
+            inter.update_normal()
+            inter.update_relativePos()
+            inter.calc_torsionMoment()
+            inter.calc_bendingMoment()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            torsionCalc.append(-inter.torsion_moment)
+            bendingCalc.append(-inter.bending_moment)
+
+        assert_array_almost_equal(torsionCalc, yadeResultTorsionMoment)
+        assert_array_almost_equal(bendingCalc, yadeResultBendingMoment)

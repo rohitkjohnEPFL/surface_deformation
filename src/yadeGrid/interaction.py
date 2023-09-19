@@ -136,15 +136,16 @@ class Interaction:
         # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
 
     def calc_torsionMoment(self) -> None:
-        axisAngle  = self.relative_ori_AA
-        print(axisAngle)
-        twist: F64 = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
-        self.torsion_defo = twist
+        axisAngle: AxisAngle  = self.relative_ori_AA
+        twist: F64            = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
+        print(twist)
+        self.torsion_defo   = twist
         self.torsion_moment = self.k_torsion * twist * self.normal
 
     def calc_bendingMoment(self) -> None:
         axisAngle: AxisAngle = self.relative_ori_AA
-        bending: Vector3D    = axisAngle.angle * axisAngle.axis - self.torsion_defo * self.normal
+        twist: F64           = axisAngle.angle * dotProduct(axisAngle.axis, self.normal)
+        bending: Vector3D    = axisAngle.angle * axisAngle.axis - twist * self.normal
         self.bending_defo    = bending
         self.bending_moment  = self.k_bending * bending
 
