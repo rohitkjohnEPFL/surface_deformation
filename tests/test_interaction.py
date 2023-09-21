@@ -637,7 +637,6 @@ class test_Interaction(TestCase):
 
         vel2: Vector3D = np.array([0, 1, 0], dtype=F64)
         b2.vel = vel2
-        b2.pos = b2.pos + b2.vel * dt
 
         penetration = 2 * rad - norm(b2.pos - b1.pos)
         alpha       = 2 * rad / (2 * rad - penetration)
