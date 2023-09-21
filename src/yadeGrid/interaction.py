@@ -169,6 +169,7 @@ class Interaction:
         self.orthonormal_axis = np.cross(self.prev_normal, self.curr_normal)
         angle                 = 0.5 * dotProduct(self.body1.angVel + self.body2.angVel, self.curr_normal)
         self.twist_axis       = angle * self.curr_normal
+        self.prev_normal      = self.curr_normal
         realtiveVel           = self.calc_IncidentVel()
         realtiveVel           = realtiveVel - dotProduct(realtiveVel, self.curr_normal) * self.curr_normal
         self.shearInc         = realtiveVel * self.dt
@@ -190,8 +191,12 @@ class Interaction:
         return relativeVelocity
 
     def rotate_shearForce(self) -> None:
+        print("before rotation: ", self.shear_force)
+        print("orthonormal_axis: ", self.orthonormal_axis)
+        print("twist_axis: ", self.twist_axis)
         self.shear_force = self.shear_force - crossProduct(self.shear_force, self.orthonormal_axis)
         self.shear_force = self.shear_force - crossProduct(self.shear_force, self.twist_axis)
+        print("after rotation: ", self.shear_force)
 
     def calc_ShearForce(self) -> None:
         self.precompute_ForShear()

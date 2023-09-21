@@ -611,12 +611,12 @@ class test_Interaction(TestCase):
 
         shearIncs = []
         for pos, vel in zip(yadePos, yadeVel):
-            b2.pos = np.array(pos, dtype=F64)
             b2.vel = np.array(vel, dtype=F64)
             inter.update_currNormal()
             inter.calc_NormalForce()
             inter.calc_ShearForce()
 
+            b2.pos = np.array(pos, dtype=F64)
             # Minus because force is calculated in terms of body 1 and it is equal and opposite
             # for body 2
             shearIncs.append(inter.shearInc)
@@ -794,16 +794,43 @@ class test_Interaction(TestCase):
 
         assert_array_equal(forceCalc, yadeForces)
 
-    # def test_shearForcePerpLinearVelocityYade(self) -> None:
-    #     rad     = F64(0.1)
-    #     density = F64(2700.0)
-    #     pos1    = np.array([0, 0, 0], dtype=F64)
-    #     pos2    = np.array([1, 0, 0], dtype=F64)
-    #     young   = F64(70e9)
-    #     poisson = F64(0.35)
-    #     b1 = Body(pos=pos1, radius=rad, density=density)
-    #     b2 = Body(pos=pos2, radius=rad, density=density)
-    #     dt = F64(1e-6)
-    #     inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+    def test_shearForcePerpLinearVelocityYade(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
-        
+        with open(".\\tests\\yadeResults\\shearPerpLinearVel.json", "r") as file:
+            yadeResult = json.load(file)
+
+        yadePos   = yadeResult["pos"]
+        yadeVel   = yadeResult["vels"]
+        yadeForce = yadeResult["force"]
+
+        forceCalc = []
+        for pos, vel in zip(yadePos, yadeVel):
+            b2.vel = np.array(vel, dtype=F64)
+            inter.update_currNormal()
+            inter.calc_NormalForce()
+            inter.calc_ShearForce()
+
+            # YADE seems to run one loop of the the simulation before it start using user defined engines. So it would have calculated
+            # a shear increment and shear force before the user defined engine is called and the data is recorded. So shear increment 
+            # and shear force is calculated, and the body is moved before the data is recorded. The first shear increment is calculated
+            # when the position of the body is [1, 0, 0], but the data says the first recorded position is [1, 1e-6, 0]. If we do not
+            # account for this, there will be an offset in our calculation. Since the shear is calculated before the initial movement,
+            # we do the same. The body's movement is moved to the end of the loop.  
+            b2.pos = np.array(pos, dtype=F64)
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            forceCalc.append(-inter.shear_force)
+
+        [print(i, " & ", j) for i, j in zip(forceCalc, yadeForce)]
+        assert_array_almost_equal(forceCalc, yadeForce)
