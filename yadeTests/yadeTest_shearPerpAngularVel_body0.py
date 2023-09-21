@@ -12,13 +12,12 @@ import json
 
 O.engines = [
         ForceResetter(),
-        # PyRunner(command='move()', iterPeriod = 1),
+        PyRunner(command='record()', iterPeriod=1),
         InsertionSortCollider([Bo1_GridConnection_Aabb()]),
         InteractionLoop(
                 [Ig2_GridNode_GridNode_GridNodeGeom6D()], [Ip2_CohFrictMat_CohFrictMat_CohFrictPhys(setCohesionNow=True, setCohesionOnNewContacts=False)],
                 [Law2_ScGeom6D_CohFrictPhys_CohesionMoment()]
         ),
-        PyRunner(command='record()', iterPeriod=1),
         PyRunner(command='display()', iterPeriod=26),
         NewtonIntegrator(gravity=(0, 0, 0), damping=0.1, label='newton')
 ]
@@ -45,27 +44,30 @@ for i, j in zip(nodeIds[:-1], nodeIds[1:]):
 O.bodies[0].dynamic = False
 O.bodies[1].dynamic = False
 # O.bodies[0].state.vel = [1,0,0]
+moved_body = 0
 
 oris = []
 fs = []
 vels = []
 shearIncs = []
 
-vel = 1000.0
-O.bodies[0].state.angVel = [0,vel,0]
+vel = 100.0
+O.bodies[moved_body].state.angVel = [0,vel,0]
 
 
 
 def record():
         global oris, fs, vels, shearIncs
-        ori = O.bodies[0].state.ori
-        v   = O.bodies[0].state.angVel
+        ori = O.bodies[moved_body].state.ori
+        v   = O.bodies[moved_body].state.angVel
         force = O.interactions[0,1].phys.shearForce
         dus = O.interactions[0,1].geom.shearInc
         oris.append([ori[3], ori[0], ori[1], ori[2]])
         fs.append(list(force))
         vels.append(list(v))
         shearIncs.append(list(dus))
+        print(ori)
+        print(force)
         print(O.iter)
 
 

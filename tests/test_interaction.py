@@ -1,5 +1,5 @@
 from yadeGrid import Body, Interaction, F64, Quaternion, Vector3D
-from yadeGrid.vectorFunc import normalise, dotProduct
+from yadeGrid.vectorFunc import normalise, dotProduct, norm
 from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_array_equal, assert_array_almost_equal
@@ -589,7 +589,7 @@ class test_Interaction(TestCase):
         assert_array_almost_equal(torsionCalc, yadeResultTorsionMoment)
         assert_array_almost_equal(bendingCalc, yadeResultBendingMoment)
 
-    def test_shearIncrementPerpLinearVelocity(self) -> None:
+    def test_shearIncrementPerpLinearVelocityYade(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -623,7 +623,34 @@ class test_Interaction(TestCase):
 
         assert_array_equal(shearIncs, yadeDus)
 
-    def test_shearIncrementAngularVelocity_body2(self) -> None:
+    def test_shearIncrementPerpLinearVelocity(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+        vel2: Vector3D = np.array([0, 1, 0], dtype=F64)
+        b2.vel = vel2
+        b2.pos = b2.pos + b2.vel * dt
+
+        penetration = 2 * rad - norm(b2.pos - b1.pos)
+        alpha       = 2 * rad / (2 * rad - penetration)
+        shearIncrementCalc = vel2 * alpha * dt
+        shearForceCalc     = shearIncrementCalc * inter.k_shear
+        inter.update_currNormal()
+        inter.calc_NormalForce()
+        inter.calc_ShearForce()
+
+        assert_almost_equal(inter.shear_force, shearForceCalc)
+
+
+    def test_shearIncrementAngularVelocityYade_body2(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -660,7 +687,7 @@ class test_Interaction(TestCase):
         assert_array_equal(shearIncs, yadeDus)
 
 
-    def test_shearIncrementAngularVelocity_body1(self) -> None:
+    def test_shearIncrementAngularVelocityYade_body1(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -695,5 +722,89 @@ class test_Interaction(TestCase):
             shearIncs.append(inter.shearInc)
 
         assert_array_equal(shearIncs, yadeDus)
-    
 
+    def test_shearForceAngularVelocityYade_body1(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+
+        with open(".\\tests\\yadeResults\\shearPerpAngVel_body0.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+
+        yadeOri   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+        yadeVel   = yadeResult["vels"]
+        yadeForces = yadeResult["force"]
+
+
+        forceCalc = []
+        for ori, vel in zip(yadeOri, yadeVel):
+            b1.ori = ori
+            b1.angVel = np.array(vel, dtype=F64)
+            inter.update_currNormal()
+            inter.calc_NormalForce()
+            inter.calc_ShearForce()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            forceCalc.append(-inter.shear_force)
+
+        assert_array_equal(forceCalc, yadeForces)
+
+    def test_shearForceAngularVelocityYade_body2(self) -> None:
+        rad     = F64(0.1)
+        density = F64(2700.0)
+        pos1    = np.array([0, 0, 0], dtype=F64)
+        pos2    = np.array([1, 0, 0], dtype=F64)
+        young   = F64(70e9)
+        poisson = F64(0.35)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
+        dt = F64(1e-6)
+        inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+
+        with open(".\\tests\\yadeResults\\shearPerpAngVel_body1.json", "r") as file:
+            yadeResult = json.load(file)
+            yadeResultOri: list[list[float]] = yadeResult["ori"]
+
+        yadeOri   = [Quaternion(np.array(ori)) for ori in yadeResultOri]
+        yadeVel   = yadeResult["vels"]
+        yadeForces = yadeResult["force"]
+
+
+        forceCalc = []
+        for ori, vel in zip(yadeOri, yadeVel):
+            b2.ori = ori
+            b2.angVel = np.array(vel, dtype=F64)
+            inter.update_currNormal()
+            inter.calc_NormalForce()
+            inter.calc_ShearForce()
+
+            # Minus because force is calculated in terms of body 1 and it is equal and opposite
+            # for body 2
+            forceCalc.append(-inter.shear_force)
+
+        assert_array_equal(forceCalc, yadeForces)
+
+    # def test_shearForcePerpLinearVelocityYade(self) -> None:
+    #     rad     = F64(0.1)
+    #     density = F64(2700.0)
+    #     pos1    = np.array([0, 0, 0], dtype=F64)
+    #     pos2    = np.array([1, 0, 0], dtype=F64)
+    #     young   = F64(70e9)
+    #     poisson = F64(0.35)
+    #     b1 = Body(pos=pos1, radius=rad, density=density)
+    #     b2 = Body(pos=pos2, radius=rad, density=density)
+    #     dt = F64(1e-6)
+    #     inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
+
+        

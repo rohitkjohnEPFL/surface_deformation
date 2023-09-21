@@ -43,7 +43,6 @@ class Interaction:
     torsion_moment: Vector3D = field(default=np.array([0, 0, 0], dtype=F64))
 
     normal_defo: F64         = field(default=0.0)
-    shear_defo: Vector3D     = field(default=np.array([0, 0, 0], dtype=F64))
     bending_defo: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
     torsion_defo: F64        = field(default=0.0)
 
@@ -119,7 +118,6 @@ class Interaction:
         self.calc_NormalForce()
         self.calc_torsionMoment()
         self.calc_bendingMoment()
-        
 
 
     def update_currNormal(self) -> None:
@@ -198,7 +196,7 @@ class Interaction:
     def calc_ShearForce(self) -> None:
         self.precompute_ForShear()
         self.rotate_shearForce()
-        self.shear_force = self.shear_force - self.k_shear * self.shearInc
+        self.shear_force = self.shear_force + self.k_shear * self.shearInc
 
 
 # @jit(nopython=True)  # type: ignore
