@@ -8,3 +8,4 @@ venv/*
 blah.py
 .tox/*
 .coverage
+tests/yadeResults/bk81/*

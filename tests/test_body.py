@@ -1,4 +1,5 @@
 from yadeGrid import Body, Quaternion, AxisAngle
+from yadeGrid.body import multiply_quat, norm_quat
 from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal, assert_almost_equal
@@ -198,6 +199,62 @@ class test_quaternion(TestCase):
         axisAngle = q.conv_2axisAngle()
         assert_almost_equal(axisAngle.axis, np.array([1, 0, 0]))
         assert_almost_equal(axisAngle.angle, np.pi / 2.0)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                                                                    Multiply Quat #
+# ------------------------------------------------------------------------------------------------ #
+class Test_MultiplyQuat(TestCase):
+
+    def test_identity(self):
+        q1 = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        identity = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        result = multiply_quat(q1, identity)
+        np.testing.assert_array_equal(result, q1)
+
+    def test_commutative_property(self):
+        q1 = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        q2 = np.array([6.0, 3.2, 1.5, 5.0], dtype=np.float64)
+        result1 = multiply_quat(q1, q2)
+        result2 = multiply_quat(q2, q1)
+        self.assertFalse(np.array_equal(result1, result2))
+
+    def test_inverse(self):
+        q1 = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        norm_sq = np.sum(q1**2)
+        q_inv = np.array([q1[0], -q1[1], -q1[2], -q1[3]]) / norm_sq
+        result = multiply_quat(q1, q_inv)
+        np.testing.assert_array_almost_equal(result, np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64))
+
+    def test_zero_quaternion(self):
+        q1 = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        zero_quat = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        result = multiply_quat(q1, zero_quat)
+        np.testing.assert_array_equal(result, zero_quat)
+
+
+# ------------------------------------------------------------------------------------------------ #
+#                                                                                             Norm #
+# ------------------------------------------------------------------------------------------------ #
+class TestNormQuatFunction(TestCase):
+
+    def test_norm_unit_quat(self):
+        q = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        self.assertEqual(norm_quat(q), 1.0)
+
+    def test_norm_zero_quat(self):
+        q = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        self.assertEqual(norm_quat(q), 0.0)
+
+    def test_norm_general_quat(self):
+        q = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
+        expected_norm = np.sqrt(1.0**2 + 2.0**2 + 3.0**2 + 4.0**2)
+        self.assertEqual(norm_quat(q), expected_norm)
+
+    def test_norm_negative_quat(self):
+        q = np.array([-1.0, -2.0, -3.0, -4.0], dtype=np.float64)
+        expected_norm = np.sqrt((-1.0)**2 + (-2.0)**2 + (-3.0)**2 + (-4.0)**2)
+        self.assertEqual(norm_quat(q), expected_norm)
 
 
 # ------------------------------------------------------------------------------------------------ #
