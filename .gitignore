@@ -6,3 +6,5 @@ venv/*
 */__pycache__/*
 */yadeGrid.egg-info/*
 blah.py
+.tox/*
+.coverage
