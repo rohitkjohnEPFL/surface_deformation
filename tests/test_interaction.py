@@ -821,11 +821,11 @@ class test_Interaction(TestCase):
             inter.calc_ShearForce()
 
             # YADE seems to run one loop of the the simulation before it start using user defined engines. So it would have calculated
-            # a shear increment and shear force before the user defined engine is called and the data is recorded. So shear increment 
+            # a shear increment and shear force before the user defined engine is called and the data is recorded. So shear increment
             # and shear force is calculated, and the body is moved before the data is recorded. The first shear increment is calculated
             # when the position of the body is [1, 0, 0], but the data says the first recorded position is [1, 1e-6, 0]. If we do not
             # account for this, there will be an offset in our calculation. Since the shear is calculated before the initial movement,
-            # we do the same. The body's movement is moved to the end of the loop.  
+            # we do the same. The body's movement is moved to the end of the loop.
             b2.pos = np.array(pos, dtype=F64)
 
             # Minus because force is calculated in terms of body 1 and it is equal and opposite

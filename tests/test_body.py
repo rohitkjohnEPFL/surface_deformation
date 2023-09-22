@@ -193,7 +193,7 @@ class test_quaternion(TestCase):
         ang = np.pi / 2.0
         axis = np.array([1, 0, 0])
         scale = random()
-        
+
         q = Quaternion(components=scale * np.array([np.cos(ang / 2), *axis * np.sin(ang / 2)]))
         axisAngle = q.conv_2axisAngle()
         assert_almost_equal(axisAngle.axis, np.array([1, 0, 0]))

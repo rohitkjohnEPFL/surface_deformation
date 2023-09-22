@@ -121,8 +121,6 @@ class Interaction:
 
 
     def update_currNormal(self) -> None:
-        # print(self.body2.pos)
-        # print(self.body1.pos)
         self.curr_normal = normalise(self.body2.pos - self.body1.pos)
 
     def update_relativePos(self) -> None:
@@ -164,7 +162,7 @@ class Interaction:
 
         for the implementation
 
-        check the bool Law2_ScGeom6D_CohFrictPhys_CohesionMoment::go() function in 
+        check the bool Law2_ScGeom6D_CohFrictPhys_CohesionMoment::go() function in
         https://gitlab.com/yade-dev/trunk/-/blob/master/pkg/dem/CohesiveFrictionalContactLaw.cpp?ref_type=heads'''
         self.orthonormal_axis = np.cross(self.prev_normal, self.curr_normal)
         angle                 = 0.5 * dotProduct(self.body1.angVel + self.body2.angVel, self.curr_normal)
@@ -191,12 +189,8 @@ class Interaction:
         return relativeVelocity
 
     def rotate_shearForce(self) -> None:
-        print("before rotation: ", self.shear_force)
-        print("orthonormal_axis: ", self.orthonormal_axis)
-        print("twist_axis: ", self.twist_axis)
         self.shear_force = self.shear_force - crossProduct(self.shear_force, self.orthonormal_axis)
         self.shear_force = self.shear_force - crossProduct(self.shear_force, self.twist_axis)
-        print("after rotation: ", self.shear_force)
 
     def calc_ShearForce(self) -> None:
         self.precompute_ForShear()
