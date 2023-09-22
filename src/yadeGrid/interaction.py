@@ -34,7 +34,7 @@ class Interaction:
     curr_normal: Vector3D      = field(default=np.array([0, 0, 0]))
     relativeVelocity: Vector3D = field(default=np.array([0, 0, 0], dtype=F64))
     shearInc: Vector3D         = field(default=np.array([0, 0, 0], dtype=F64))
-
+    contactPoint: Vector3D     = field(default=np.array([0, 0, 0], dtype=F64))
 
     # Default initialised attributes
     normal_force: Vector3D   = field(default=np.array([0, 0, 0], dtype=F64))
@@ -79,6 +79,8 @@ class Interaction:
         self.curr_normal = (self.body2.pos - self.body1.pos) / edge_length
         self.prev_normal = self.curr_normal
 
+        # Calculating the contact point
+        self.contactPoint = (self.body1.pos + self.body2.pos) / 2.0
 
         # calculating the stiffnesses
         area = np.pi * rad**2
@@ -116,8 +118,11 @@ class Interaction:
         self.update_currNormal()
         self.update_relativePos()
         self.calc_NormalForce()
+        self.calc_twistBending()
         self.calc_torsionMoment()
         self.calc_bendingMoment()
+        self.calc_ShearForce()
+        self.apply_ForceTorque()
 
 
     def update_currNormal(self) -> None:
@@ -128,8 +133,9 @@ class Interaction:
         ori1 = self.body1.ori
         ori2 = self.body2.ori
         ori1_inv = ori1.inverse()
-        self.relative_ori = ori1_inv * ori2
+        self.relative_ori    = ori1_inv * ori2
         self.relative_ori_AA = self.relative_ori.conv_2axisAngle()
+        self.contactPoint    = (self.body1.pos + self.body2.pos) / 2.0
 
     # @jit(nopython=True)  # type: ignore
     def calc_NormalForce(self) -> None:
@@ -141,19 +147,17 @@ class Interaction:
 
         # If you want to use numba, use the following code
         # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
+    def calc_twistBending(self):
+        axisAngle: AxisAngle  = self.relative_ori_AA
+        self.torsion_defo     = axisAngle.angle * dotProduct(axisAngle.axis, self.curr_normal)
+        self.bending_defo     = axisAngle.angle * axisAngle.axis - self.torsion_defo * self.curr_normal
 
     def calc_torsionMoment(self) -> None:
-        axisAngle: AxisAngle  = self.relative_ori_AA
-        twist: F64            = axisAngle.angle * dotProduct(axisAngle.axis, self.curr_normal)
-        self.torsion_defo   = twist
-        self.torsion_moment = self.k_torsion * twist * self.curr_normal
+        self.torsion_moment = self.k_torsion * self.torsion_defo * self.curr_normal
+
 
     def calc_bendingMoment(self) -> None:
-        axisAngle: AxisAngle = self.relative_ori_AA
-        twist: F64           = axisAngle.angle * dotProduct(axisAngle.axis, self.curr_normal)
-        bending: Vector3D    = axisAngle.angle * axisAngle.axis - twist * self.curr_normal
-        self.bending_defo    = bending
-        self.bending_moment  = self.k_bending * bending
+        self.bending_moment  = self.k_bending * self.bending_defo
 
     def precompute_ForShear(self) -> None:
         '''To compute the shear increment, shear force is calculated using an incremental formulation
@@ -164,7 +168,7 @@ class Interaction:
 
         check the bool Law2_ScGeom6D_CohFrictPhys_CohesionMoment::go() function in
         https://gitlab.com/yade-dev/trunk/-/blob/master/pkg/dem/CohesiveFrictionalContactLaw.cpp?ref_type=heads'''
-        self.orthonormal_axis = np.cross(self.prev_normal, self.curr_normal)
+        self.orthonormal_axis = crossProduct(self.prev_normal, self.curr_normal)
         angle                 = 0.5 * dotProduct(self.body1.angVel + self.body2.angVel, self.curr_normal)
         self.twist_axis       = angle * self.curr_normal
         self.prev_normal      = self.curr_normal
@@ -196,6 +200,20 @@ class Interaction:
         self.precompute_ForShear()
         self.rotate_shearForce()
         self.shear_force = self.shear_force + self.k_shear * self.shearInc
+
+    def apply_ForceTorque(self) -> None:
+        self.body1.force  = self.body1.force  + self.normal_force + self.shear_force
+        self.body2.force  = self.body2.force  - self.normal_force - self.shear_force
+
+        pos1_wrt_contact  = self.body1.pos - self.contactPoint
+        pos2_wrt_contact  = self.body2.pos - self.contactPoint
+        body1_shearTorque  = crossProduct(pos1_wrt_contact,  self.shear_force)
+        body2_shearTorque  = crossProduct(pos2_wrt_contact, -self.shear_force)
+        body1_normalTorque = crossProduct(pos1_wrt_contact,  self.normal_force)
+        body2_normalTorque = crossProduct(pos2_wrt_contact, -self.normal_force)
+
+        self.body1.torque = self.body1.torque + body1_shearTorque + body1_normalTorque + self.bending_moment + self.torsion_moment
+        self.body2.torque = self.body2.torque + body2_shearTorque + body2_normalTorque - self.bending_moment - self.torsion_moment
 
 
 # @jit(nopython=True)  # type: ignore
