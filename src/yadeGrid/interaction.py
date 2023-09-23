@@ -6,6 +6,8 @@ from yadeGrid.vectorFunc import norm, normalise, dotProduct, crossProduct
 from yadeGrid.yadeTypes import Vector3D, F64
 # from numba import jit
 
+# For some reason YADE applied - moment to body1 and + moment to body2
+
 
 @define(slots=True)
 class Interaction:
@@ -23,6 +25,8 @@ class Interaction:
     k_bending: F64   = field(default=0.0)
     k_torsion: F64   = field(default=0.0)
     edge_length: F64 = field(default=0.0)
+    ori1_init: Quaternion = field(default=Quaternion())
+    ori2_init: Quaternion = field(default=Quaternion())
 
     # Calculated states
     relative_pos: Vector3D  = field(default=np.array([0, 0, 0], dtype=F64))
@@ -82,6 +86,10 @@ class Interaction:
         # Calculating the contact point
         self.contactPoint = (self.body1.pos + self.body2.pos) / 2.0
 
+        # Initialising the orientations
+        self.ori1_init = self.body1.ori
+        self.ori2_init = self.body2.ori
+
         # calculating the stiffnesses
         area = np.pi * rad**2
         torsionalAreaMoment  = np.pi * rad**4 / 2
@@ -132,8 +140,10 @@ class Interaction:
         self.relative_pos = self.body2.pos - self.body1.pos
         ori1 = self.body1.ori
         ori2 = self.body2.ori
-        ori1_inv = ori1.inverse()
-        self.relative_ori    = ori1_inv * ori2
+        ori2_inv = ori2.inverse()
+        ori1_init_inv = self.ori1_init.inverse()
+
+        self.relative_ori    = (ori1 * ori1_init_inv) * (self.ori2_init * ori2_inv)
         self.relative_ori_AA = self.relative_ori.conv_2axisAngle()
         self.contactPoint    = (self.body1.pos + self.body2.pos) / 2.0
 
@@ -147,7 +157,7 @@ class Interaction:
 
         # If you want to use numba, use the following code
         # self.normal_force = calc_NormalForce_JIT(self.body1.pos, self.body2.pos, self.normal, self.edge_length, self.k_normal)
-    def calc_twistBending(self):
+    def calc_twistBending(self) -> None:
         axisAngle: AxisAngle  = self.relative_ori_AA
         self.torsion_defo     = axisAngle.angle * dotProduct(axisAngle.axis, self.curr_normal)
         self.bending_defo     = axisAngle.angle * axisAngle.axis - self.torsion_defo * self.curr_normal
