@@ -335,27 +335,31 @@ class test_Interaction(TestCase):
         ang1    = np.pi / 4
         axis1   = normalise(np.array([0, 4, 1], dtype=F64))
         ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
-        ori1Inv = ori1.inverse()
 
         ang2    = np.pi / 2
         axis2   = normalise(np.array([0, 1, 5], dtype=F64))
         ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
-
-        relative_ori = ori1Inv * ori2
+        ori2Inv = ori2.inverse()
+        relative_ori = ori1 * ori2Inv
         relative_ori.normalize()
 
         pos1    = np.array([0, 0, 0], dtype=F64)
         pos2    = np.array([1, 0, 0], dtype=F64)
         relative_pos = pos2 - pos1
 
-        b1 = Body(pos=pos1, radius=rad, density=density, ori=ori1)
-        b2 = Body(pos=pos2, radius=rad, density=density, ori=ori2)
+        b1 = Body(pos=pos1, radius=rad, density=density)
+        b2 = Body(pos=pos2, radius=rad, density=density)
         dt = F64(1e-6)
         inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
+        # Updating body position
+        inter.body1.ori = ori1
+        inter.body2.ori = ori2
+
         inter.calc_ForcesTorques()
 
-        self.assertEqual(inter.relative_ori, relative_ori)
+        print("inter", inter.relative_ori.components, " calc", relative_ori.components)
+        assert_array_equal(inter.relative_ori.components, relative_ori.components)
         assert_array_equal(inter.relative_pos, relative_pos)
 
     def test_torsionMoment(self) -> None:
@@ -396,7 +400,7 @@ class test_Interaction(TestCase):
         # Calculate interaction
         inter.calc_ForcesTorques()
 
-        MomentExp = inter.curr_normal * ang2 * inter.k_torsion
+        MomentExp = -inter.curr_normal * ang2 * inter.k_torsion
         assert_almost_equal(inter.torsion_moment, MomentExp)
 
     def test_torsionMomentYade(self) -> None:
@@ -425,8 +429,9 @@ class test_Interaction(TestCase):
             inter.calc_ForcesTorques()
 
             # Minus because force is calculated in terms of body 1 and it is equal and opposite
-            # for body 2
-            momentCalc.append(-inter.torsion_moment[0])
+            # for body 2. This was what I thought for moments too, but it is not the case.
+            # YADE computes the moment in terms of body 2, so I have to change the sign.
+            momentCalc.append(inter.torsion_moment[0])
 
         assert_array_almost_equal(momentCalc, yadeMoment)
 
@@ -460,11 +465,15 @@ class test_Interaction(TestCase):
         ang2    = np.pi / 20
         axis2   = normalise(np.array([0, 1, 0], dtype=F64))
         ori2    = Quaternion(np.array([np.cos(ang2 / 2), *np.sin(ang2 / 2) * axis2]))
-        b2.ori = ori2
+        b2.ori  = ori2
 
+        relative_ori = ori2.inverse()
+        relative_ori_AA = relative_ori.conv_2axisAngle()
+        relAng       = relative_ori_AA.angle
+        relAxis      = relative_ori_AA.axis
         inter.calc_ForcesTorques()
 
-        MomentExp = axis2 * ang2 * inter.k_bending
+        MomentExp = relAxis * relAng * inter.k_bending
         assert_almost_equal(inter.bending_moment, MomentExp)
 
 
@@ -495,7 +504,7 @@ class test_Interaction(TestCase):
 
             # Minus because force is calculated in terms of body 1 and it is equal and opposite
             # for body 2
-            momentCalc.append(-inter.bending_moment[1])
+            momentCalc.append(inter.bending_moment[1])
 
         assert_array_almost_equal(momentCalc, yadeMoment)
 
@@ -513,10 +522,17 @@ class test_Interaction(TestCase):
 
         normal: Vector3D = np.array([1, 0, 0], dtype=F64)
 
-        ang1    = np.pi / 4
-        axis1   = normalise(np.array([1, 1, 0], dtype=F64))
-        ori1    = Quaternion(np.array([np.cos(ang1 / 2), *np.sin(ang1 / 2) * axis1]))
-        b2.ori = ori1
+        ang    = np.pi / 4
+        axis   = normalise(np.array([1, 1, 0], dtype=F64))
+        ori2    = Quaternion(np.array([np.cos(ang / 2), *np.sin(ang / 2) * axis]))
+        b2.ori  = ori2
+        ori1   = Quaternion()
+
+        ori_rel = ori1 * ori2.inverse()
+        ori_rel_AA = ori_rel.conv_2axisAngle()
+        ang1 = ori_rel_AA.angle
+        axis1 = ori_rel_AA.axis
+
 
         # Calculating expected moment
         twist: F64        = ang1 * dotProduct(normal, axis1)
@@ -531,7 +547,7 @@ class test_Interaction(TestCase):
         assert_array_almost_equal(inter.torsion_moment, torsionExpexted)
         assert_array_almost_equal(inter.bending_moment, bendingExpected)
 
-    def test_bendingAndTwistingYade(self):
+    def test_bendingAndTwistingYade(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -540,7 +556,6 @@ class test_Interaction(TestCase):
         poisson = F64(0.35)
         b1 = Body(pos=pos1, radius=rad, density=density)
         b2 = Body(pos=pos2, radius=rad, density=density)
-        dt = 1e-6
         dt = F64(1e-6)
         inter = Interaction(b1, b2, dt, young_mod=young, poisson=poisson)
 
@@ -560,8 +575,8 @@ class test_Interaction(TestCase):
 
             # Minus because force is calculated in terms of body 1 and it is equal and opposite
             # for body 2
-            torsionCalc.append(-inter.torsion_moment)
-            bendingCalc.append(-inter.bending_moment)
+            torsionCalc.append(inter.torsion_moment)
+            bendingCalc.append(inter.bending_moment)
 
         assert_array_almost_equal(torsionCalc, yadeResultTorsionMoment)
         assert_array_almost_equal(bendingCalc, yadeResultBendingMoment)
@@ -794,7 +809,7 @@ class test_Interaction(TestCase):
             # for body 2
             forceCalc.append(-inter.shear_force)
 
-    def test_applyForceTorque(self):
+    def test_applyForceTorque(self) -> None:
         rad     = F64(0.1)
         density = F64(2700.0)
         pos1    = np.array([0, 0, 0], dtype=F64)
@@ -864,16 +879,15 @@ class test_Interaction(TestCase):
         penetration = 2 * rad - norm(b2.pos - b1.pos)
         alpha       = 2 * rad / (2 * rad - penetration)
 
-        tangentialVel2: Vector3D = crossProduct(b2.angVel, - rad * curr_normal)
-        tangentialVel1: Vector3D = crossProduct(b1.angVel,   rad * curr_normal)
-        relativeVelocity   = (b2.vel - b1.vel) * alpha + tangentialVel2 - tangentialVel1
+        tangentialVel2   = crossProduct(b2.angVel, - rad * curr_normal)
+        tangentialVel1   = crossProduct(b1.angVel,   rad * curr_normal)
+        relativeVelocity = (b2.vel - b1.vel) * alpha + tangentialVel2 - tangentialVel1
         relativeVelocity_minusNormal   = relativeVelocity - dotProduct(relativeVelocity, curr_normal) * curr_normal
         shearIncrementCalc = relativeVelocity_minusNormal * dt
 
         # rotating shear
         orthonormal_axis = crossProduct(prev_normal, curr_normal)
         angle            = 0.5 * dotProduct(b1.angVel + b2.angVel, curr_normal)
-        self.twist_axis  = angle * curr_normal
         twist            = angle * curr_normal
         shearForceCalc   = shearForceCalc - crossProduct(shearForceCalc, orthonormal_axis)
         shearForceCalc   = shearForceCalc - crossProduct(shearForceCalc, twist)
@@ -889,8 +903,7 @@ class test_Interaction(TestCase):
         # calculate relative orientation
         ori1 = b1.ori
         ori2 = b2.ori
-        ori1_inv = ori1.inverse()
-        relative_ori    = ori1_inv * ori2
+        relative_ori    = ori1 * ori2.inverse()
         relative_ori_AA = relative_ori.conv_2axisAngle()
         relativeAngle   = relative_ori_AA.angle
         relativeAxis    = relative_ori_AA.axis
@@ -926,7 +939,7 @@ class test_Interaction(TestCase):
         assert_array_almost_equal(inter.body1.torque, torque1)
         assert_array_almost_equal(inter.body2.torque, torque2)
 
-    # def test_totalForceTorque_yade(self):
+    # def test_totalForceTorque_yade(self) -> None:
     #     rad     = F64(0.1)
     #     density = F64(2700.0)
     #     pos1    = np.array([0, 0, 0], dtype=F64)
@@ -999,8 +1012,8 @@ class test_Interaction(TestCase):
     #         print(ori2)
 
 
-    #     assert_array_almost_equal(normal_f_Calc, yadeNormal)
-    #     assert_array_almost_equal(torsion_m_Calc, yadeTorsion)
+    #     assert_array_almost_equal(normal_f_Calc, yadeNormal_f)
+    #     assert_array_almost_equal(torsion_m_Calc, yadeTorsion_m)
     #     # assert_array_almost_equal(bendingCalc, yadeBending)
     #     # assert_array_almost_equal(shearCalc, yadeShear)
     #     # assert_array_almost_equal(forceCalc1, yadeForce1)
