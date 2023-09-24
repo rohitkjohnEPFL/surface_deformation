@@ -9,3 +9,4 @@ blah.py
 .tox/*
 .coverage
 tests/yadeResults/bk81/*
+.idea/*

@@ -163,7 +163,7 @@ class Interaction:
         self.bending_defo     = axisAngle.angle * axisAngle.axis - self.torsion_defo * self.curr_normal
 
     def calc_torsionMoment(self) -> None:
-        self.torsion_moment = self.k_torsion * self.torsion_defo * self.curr_normal
+        self.torsion_moment  = self.k_torsion * self.torsion_defo * self.curr_normal
 
 
     def calc_bendingMoment(self) -> None:
@@ -179,12 +179,12 @@ class Interaction:
         check the bool Law2_ScGeom6D_CohFrictPhys_CohesionMoment::go() function in
         https://gitlab.com/yade-dev/trunk/-/blob/master/pkg/dem/CohesiveFrictionalContactLaw.cpp?ref_type=heads'''
         self.orthonormal_axis = crossProduct(self.prev_normal, self.curr_normal)
-        angle                 = 0.5 * dotProduct(self.body1.angVel + self.body2.angVel, self.curr_normal)
+        angle                 = self.dt * 0.5 * dotProduct(self.body1.angVel + self.body2.angVel, self.curr_normal)
         self.twist_axis       = angle * self.curr_normal
         self.prev_normal      = self.curr_normal
-        realtiveVel           = self.calc_IncidentVel()
-        realtiveVel           = realtiveVel - dotProduct(realtiveVel, self.curr_normal) * self.curr_normal
-        self.shearInc         = realtiveVel * self.dt
+        self.relativeVelocity = self.calc_IncidentVel()
+        self.relativeVelocity = self.relativeVelocity - dotProduct(self.relativeVelocity, self.curr_normal) * self.curr_normal
+        self.shearInc         = self.relativeVelocity * self.dt
 
     def calc_IncidentVel(self) -> Vector3D:
         rad: F64 = self.body1.radius
@@ -215,15 +215,14 @@ class Interaction:
         self.body1.force  = self.body1.force  + self.normal_force + self.shear_force
         self.body2.force  = self.body2.force  - self.normal_force - self.shear_force
 
-        pos1_wrt_contact  = self.body1.pos - self.contactPoint
-        pos2_wrt_contact  = self.body2.pos - self.contactPoint
-        body1_shearTorque  = crossProduct(pos1_wrt_contact,  self.shear_force)
-        body2_shearTorque  = crossProduct(pos2_wrt_contact, -self.shear_force)
-        body1_normalTorque = crossProduct(pos1_wrt_contact,  self.normal_force)
-        body2_normalTorque = crossProduct(pos2_wrt_contact, -self.normal_force)
+        contact_wrt_pos1  = self.contactPoint - self.body1.pos
+        contact_wrt_pos2  = self.contactPoint - self.body2.pos
 
-        self.body1.torque = self.body1.torque + body1_shearTorque + body1_normalTorque + self.bending_moment + self.torsion_moment
-        self.body2.torque = self.body2.torque + body2_shearTorque + body2_normalTorque - self.bending_moment - self.torsion_moment
+        body1_torqueDueToForce = crossProduct(contact_wrt_pos1, self.body1.force)
+        body2_torqueDueToForce = crossProduct(contact_wrt_pos2, self.body2.force)
+
+        self.body1.torque = self.body1.torque + body1_torqueDueToForce - self.bending_moment - self.torsion_moment
+        self.body2.torque = self.body2.torque + body2_torqueDueToForce + self.bending_moment + self.torsion_moment
 
 
 # @jit(nopython=True)  # type: ignore
