@@ -136,14 +136,14 @@ class Body:
     mass: F64        = field(default=0.0)           # Mass of the body
     radius: F64      = field(default=0.0)           # Radius of the body
     inertia: F64     = field(default=0.0)           # Diagonal inertia tensor of the body
-    id: int                 = field(default=0)             # Id of the body
+    id: int          = field(default=0)             # Id of the body
 
     # Force variables
     force: Vector3D    = field(default=np.array([0, 0, 0]))   # Force acting on the body
     torque: Vector3D   = field(default=np.array([0, 0, 0]))   # Torque acting on the body
 
     # Simulation parameters
-    DynamicQ: bool = field(default=False)   # Whether the body is affected by forces or not
+    DynamicQ: bool = field(default=True)   # Whether the body is affected by forces or not
     BlockedDOFs: str = field(default="")    # Which degrees of freedom are blocked, e.g. "xyz" or "xyzXYZ"
                                             # x, y, z, X, Y, Z correspond to the 6 DOFs of the body
                                             # x, y, z are the translational DOFs
