@@ -969,8 +969,8 @@ class test_Interaction(TestCase):
 
         yadeForce1 = yadeResult['force1']
         yadeForce2 = yadeResult['force2']
-        # yadeMoment1 = yadeResult['moment_1']
-        # yadeMoment2 = yadeResult['moment_2']
+        yadeMoment1 = yadeResult['moment_1']
+        yadeMoment2 = yadeResult['moment_2']
 
         # Made a mistake saving bending and torsion in the code used for YADE
         yadeBending_m = yadeResult['torsion_m']
@@ -996,7 +996,12 @@ class test_Interaction(TestCase):
         bendingCalc = []
 
         # initial interation
-        pos1, pos2, vel1, vel2, ori1, ori2, angVel1, angVel2 = yadePos1[0], yadePos2[0], yadeVel1[0], yadeVel2[0], yadeOri1[0], yadeOri2[0], yadeAngVel1[0], yadeAngVel2[0]
+        pos1, pos2 = yadePos1[0], yadePos2[0]
+        vel1, vel2 = yadeVel1[0], yadeVel2[0]
+        ori1, ori2 = yadeOri1[0], yadeOri2[0]
+        angVel1, angVel2 = yadeAngVel1[0], yadeAngVel2[0]
+
+        # First interation. Something wierd happens in YADE
         b1.vel = np.array(vel1, dtype=F64)
         b2.vel = np.array(vel2, dtype=F64)
         b1.angVel = np.array(angVel1, dtype=F64)
@@ -1010,8 +1015,19 @@ class test_Interaction(TestCase):
         inter.calc_bendingMoment()
         inter.calc_ShearForce()
 
-        inter.body1.force  = inter.body1.force  + inter.normal_force + inter.shear_force
-        inter.body2.force  = inter.body2.force  - inter.normal_force - inter.shear_force
+        totalForce1 =   inter.normal_force + inter.shear_force
+        totalForce2 = - inter.normal_force - inter.shear_force
+
+        contact_wrt_pos1  = inter.contactPoint - inter.body1.pos
+        contact_wrt_pos2  = inter.contactPoint - inter.body2.pos
+
+        body1_torqueDueToForce = crossProduct(contact_wrt_pos1, totalForce1)
+        body2_torqueDueToForce = crossProduct(contact_wrt_pos2, totalForce2)
+
+        inter.body1.force  = inter.body1.force  + totalForce1
+        inter.body2.force  = inter.body2.force  + totalForce2
+        inter.body1.torque = inter.body1.torque + body1_torqueDueToForce
+        inter.body2.torque = inter.body2.torque + body2_torqueDueToForce
 
         forceCalc1.append(inter.body1.force)
         forceCalc2.append(inter.body2.force)
@@ -1031,7 +1047,9 @@ class test_Interaction(TestCase):
         twistCalc.append(inter.torsion_defo)
         bendingCalc.append(inter.bending_defo)
 
-        for pos1, pos2, vel1, vel2, ori1, ori2, angVel1, angVel2 in zip(yadePos1[1:], yadePos2[1:], yadeVel1[1:], yadeVel2[1:], yadeOri1[1:], yadeOri2[1:], yadeAngVel1[1:], yadeAngVel2[1:]):
+        zipped_yade_states = zip(yadePos1[1:], yadePos2[1:], yadeVel1[1:], yadeVel2[1:], yadeOri1[1:], yadeOri2[1:], yadeAngVel1[1:], yadeAngVel2[1:])
+
+        for pos1, pos2, vel1, vel2, ori1, ori2, angVel1, angVel2 in zipped_yade_states:
             b1.vel = np.array(vel1, dtype=F64)
             b2.vel = np.array(vel2, dtype=F64)
             b1.angVel = np.array(angVel1, dtype=F64)
@@ -1068,7 +1086,5 @@ class test_Interaction(TestCase):
         assert_array_almost_equal(shear_f_Calc, yadeShear_f)
         assert_array_almost_equal(forceCalc1[1:], yadeForce1[:-1], decimal=5)
         assert_array_almost_equal(forceCalc2[1:], yadeForce2[:-1], decimal=5)
-        # assert_array_almost_equal(torqueCalc1[1:], yadeMoment1[:-1], decimal=5)
-        # assert_array_almost_equal(forceCalc2, yadeForce2)
-
-        
+        assert_array_almost_equal(torqueCalc1[1:], yadeMoment1[:-1], decimal=4)
+        assert_array_almost_equal(torqueCalc2[1:], yadeMoment2[:-1], decimal=4)

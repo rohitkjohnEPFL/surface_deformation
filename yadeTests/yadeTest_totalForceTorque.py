@@ -142,6 +142,8 @@ def record_force():
         tors_m = O.interactions[0,1].phys.moment_twist
         bend_m = O.interactions[0,1].phys.moment_bending
 
+        print("Moment 1: ", moment_1 + tors_m + bend_m)
+
         
 
 
@@ -156,7 +158,7 @@ def display():
 
         ans['pos2']    = poses_2
         ans['force2']  = fs_2
-        ans['moment_2'] = ms_1
+        ans['moment_2'] = ms_2
 
         ans['vel2']    = vels_2
         ans['ori2']    = oris_2

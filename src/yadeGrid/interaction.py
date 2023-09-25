@@ -212,14 +212,17 @@ class Interaction:
         self.shear_force = self.shear_force + self.k_shear * self.shearInc
 
     def apply_ForceTorque(self) -> None:
-        self.body1.force  = self.body1.force  + self.normal_force + self.shear_force
-        self.body2.force  = self.body2.force  - self.normal_force - self.shear_force
+        totalForce1 =  self.normal_force + self.shear_force
+        totalForce2 = -self.normal_force - self.shear_force
+
+        self.body1.force  = self.body1.force  + totalForce1
+        self.body2.force  = self.body2.force  + totalForce2
 
         contact_wrt_pos1  = self.contactPoint - self.body1.pos
         contact_wrt_pos2  = self.contactPoint - self.body2.pos
 
-        body1_torqueDueToForce = crossProduct(contact_wrt_pos1, self.body1.force)
-        body2_torqueDueToForce = crossProduct(contact_wrt_pos2, self.body2.force)
+        body1_torqueDueToForce = crossProduct(contact_wrt_pos1, totalForce1)
+        body2_torqueDueToForce = crossProduct(contact_wrt_pos2, totalForce2)
 
         self.body1.torque = self.body1.torque + body1_torqueDueToForce - self.bending_moment - self.torsion_moment
         self.body2.torque = self.body2.torque + body2_torqueDueToForce + self.bending_moment + self.torsion_moment
